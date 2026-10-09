@@ -1,0 +1,102 @@
+{
+  "workbook": "engineering/requirements/修改队列.xlsx",
+  "sheet": "Sheet1",
+  "captured_from": "user-supplied workbook, original PNG bytes unchanged",
+  "original_workbook_sha256": "22eee83ce1c98cc27f229637fad215d42deacf34a39f46a52a0121a62bbb5882",
+  "rows": [
+    {
+      "requirement_cell": "D2",
+      "reference_cell": "B2",
+      "reference_image": "workbook/muse-chat.png",
+      "navi_cell": "C2",
+      "navi_image": "workbook/navi-chat.png"
+    },
+    {
+      "requirement_cell": "D3",
+      "reference_cell": "B3",
+      "reference_image": "workbook/muse-titles.png",
+      "navi_cell": "C3",
+      "navi_image": "workbook/navi-titles.png"
+    },
+    {
+      "requirement_cell": "D4",
+      "reference_cell": "B4",
+      "reference_image": "workbook/muse-feed.png",
+      "navi_cell": "C4",
+      "navi_image": "workbook/navi-feed.png"
+    },
+    {
+      "requirement_cell": "D5",
+      "reference_cell": "B5",
+      "reference_image": "workbook/muse-ideas.png",
+      "navi_cell": "C5",
+      "navi_image": "workbook/navi-idea-titles.png"
+    },
+    {
+      "requirement_cell": "D6",
+      "reference_cell": "B6",
+      "reference_image": "workbook/muse-ideas.png",
+      "navi_cell": "C6",
+      "navi_image": "workbook/navi-ideas.png"
+    },
+    {
+      "requirement_cell": "D7",
+      "reference_cell": "B7",
+      "reference_image": "workbook/muse-idea-detail.png",
+      "navi_cell": "C7",
+      "navi_image": "workbook/navi-idea-detail.png"
+    },
+    {
+      "requirement_cell": "D8",
+      "reference_cell": "B8",
+      "reference_image": "workbook/muse-search.png",
+      "navi_cell": "C8",
+      "navi_image": "workbook/navi-search.png"
+    },
+    {
+      "requirement_cell": "D9",
+      "reference_cell": "B9",
+      "reference_image": "workbook/muse-library.png",
+      "navi_cell": "C9",
+      "navi_image": "workbook/navi-library.png"
+    },
+    {
+      "requirement_cell": "D10",
+      "reference_cell": "B10",
+      "reference_image": "workbook/muse-empty-goals.png",
+      "navi_cell": "C10",
+      "navi_image": "workbook/navi-goals.png"
+    },
+    {
+      "requirement_cell": "D11",
+      "reference_cell": "B11",
+      "reference_image": "workbook/muse-goal-setup.png",
+      "navi_cell": null,
+      "navi_image": null
+    }
+  ],
+  "live_comparison": {
+    "date": "2026-10-07",
+    "muse": "installed native app, read-only page and modal inspection; one neutral interest setup conversation started; no goal or task created",
+    "navi": "local app 127.0.0.1:8766, actual DeepSeek interest-option test replied; no goal, memory, reminder or export created",
+    "limits": "Muse native text input/paste could not safely complete a new multiround test; an existing finance choice flow and cancellation history were inspected; next-day 06:00 behavior not observed"
+  },
+  "public_feed_read_only_checks": [
+    {
+      "source_id": "openai",
+      "http_status": 200,
+      "parsed_items": 3
+    },
+    {
+      "source_id": "python",
+      "http_status": 200,
+      "parsed_items": 3
+    },
+    {
+      "source_id": "nasa",
+      "http_status": 200,
+      "parsed_items": 3
+    }
+  ],
+  "changes_authorized_now": "planning document and its evidence files only; no product code, workbook or personal target state changes"
+}

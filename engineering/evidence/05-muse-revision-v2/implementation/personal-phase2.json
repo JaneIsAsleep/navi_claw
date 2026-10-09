@@ -1,0 +1,52 @@
+{
+  "evidence_type": "personal-live-ui",
+  "test_goal_id": "76121cc84f66442393b4f385d3b4f625",
+  "test_session_id": "a7dfee140afd433195cfb7a66daa2da3",
+  "state_after_checkbox": "completed",
+  "original_goals_untouched": true,
+  "jobs": [
+    {
+      "id": "62cb6e7354c742e1b5d951c008957ff7",
+      "kind": "goal_save",
+      "status": "succeeded"
+    },
+    {
+      "id": "80e85d3af4684feb87d10555ad498d31",
+      "kind": "goal_setup",
+      "status": "succeeded"
+    },
+    {
+      "id": "054713f60ff64d8ca14f54131ec8d5a0",
+      "kind": "session_meta",
+      "status": "succeeded"
+    },
+    {
+      "id": "f7857e1dd63643afadb8f31dd2b84d5b",
+      "kind": "goal_setup",
+      "status": "succeeded"
+    }
+  ],
+  "original_goals_memories_artifacts_unchanged": true,
+  "test_goal_removed": true,
+  "messages_preserved": 6,
+  "receipts": [
+    {
+      "job_id": "f7857e1dd63643afadb8f31dd2b84d5b",
+      "input": 293,
+      "output": 65,
+      "estimated": 0
+    },
+    {
+      "job_id": "054713f60ff64d8ca14f54131ec8d5a0",
+      "input": 112,
+      "output": 35,
+      "estimated": 0
+    },
+    {
+      "job_id": "80e85d3af4684feb87d10555ad498d31",
+      "input": 360,
+      "output": 58,
+      "estimated": 0
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "timestamp": "2026-10-03T10:35:37.559979+00:00",
+  "evidence_type": "actual-browser-with-isolated-fixed-data",
+  "status": "passed",
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 802
+    },
+    {
+      "width": 375,
+      "height": 812
+    },
+    {
+      "width": 320,
+      "height": 740
+    }
+  ],
+  "checks": [
+    "手动重命名刷新持久，Escape 回管理按钮",
+    "重复新建保留本地草稿，不增加空历史",
+    "标题检索找回封存话题，查看不解封，明确解封后回历史",
+    "无启用来源显示未检查",
+    "引用可检查和移除，讨论保留已有草稿",
+    "原回复与集中审核共用第二版导出，拒绝无 Outbox",
+    "中断后有真实来源的提案仍可见，决定后焦点留在行动卡",
+    "删除清单列出关联提醒，默认取消，焦点约束，Escape 取消不改变数据并回原按钮",
+    "助手四标签支持方向键，身份内记忆可停用，回执直达具体条目",
+    "草稿及阅读位置跨页保留，scrollTop 319 恢复为 319",
+    "320px 详情宽度 320px，按钮点击区至少 44px，无横向溢出",
+    "目标分类保留草稿，仅准备讨论，不创建记录",
+    "实际下载与导出字节一致"
+  ],
+  "fixture_counts": {
+    "model_requests": 0,
+    "actual_deliveries": 1,
+    "rejected_without_outbox": 2
+  },
+  "download_sha256": "9d3e9c475253d44e45d836c24e2a24d6cc85b3faaf5a43e14975dacae0d81ac8",
+  "unverified": [
+    "实体手机软键盘与触屏",
+    "实际电脑休眠唤醒"
+  ],
+  "extra_live_flow": "not executed; user declined execution permission",
+  "week_trial": "not started"
+}

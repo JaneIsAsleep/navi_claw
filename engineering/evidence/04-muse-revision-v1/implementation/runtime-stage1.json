@@ -1,0 +1,12 @@
+{
+  "stage": 1,
+  "timestamp": 1791349944.0829198,
+  "status": "passed",
+  "checks": [
+    "启动器退出后 PID 1 托管，无终端",
+    "重复启动复用进程",
+    "实际停止、重新启动和持久状态恢复",
+    "CLI 和 Web 会话一致"
+  ],
+  "browser_closed": "verified separately by UI and background endpoint"
+}

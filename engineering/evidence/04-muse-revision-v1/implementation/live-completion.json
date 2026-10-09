@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "finished_at": "2026-10-07T06:23:13.713771+00:00",
+  "reports": [
+    {
+      "path": "engineering/evidence/04-muse-revision-v1/implementation/live-evidence.json",
+      "status": "passed",
+      "timestamp": "2026-10-07T06:19:33.163783+00:00",
+      "checks": 8,
+      "jobs": 9
+    },
+    {
+      "path": "engineering/evidence/04-muse-revision-v1/implementation/refinement-live-evidence.json",
+      "status": "passed",
+      "timestamp": "2026-10-07T06:17:36.761797+00:00",
+      "checks": 8,
+      "jobs": 7
+    },
+    {
+      "path": "engineering/evidence/04-muse-revision-v1/implementation/live-stage3.json",
+      "status": "passed",
+      "timestamp": "2026-10-07T06:18:07.752904+00:00",
+      "checks": 5,
+      "jobs": 15
+    }
+  ],
+  "independent_check_groups": 20,
+  "daily_limits": {
+    "requests": 300,
+    "tokens": 300000
+  },
+  "usage_before": {
+    "requests": 100,
+    "tokens": 157970
+  },
+  "usage_after": {
+    "requests": 164,
+    "tokens": 265398,
+    "estimated": 1
+  },
+  "total_runtime_usage_during_continuation": {
+    "requests": 64,
+    "tokens": 107428
+  },
+  "existing_personal_data_preserved": true,
+  "additional_personal_records": 1,
+  "additional_records_from_isolated_harness": false,
+  "CLI_Web_same_sessions": true,
+  "code_changes_during_continuation": false,
+  "week_trial": "pending-real-use",
+  "actual_next_day_0600_wait": "not-performed"
+}

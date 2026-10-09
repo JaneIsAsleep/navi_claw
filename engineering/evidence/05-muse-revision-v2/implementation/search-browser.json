@@ -1,0 +1,898 @@
+{
+  "evidence_type": "isolated-offline-browser",
+  "geometry": [
+    {
+      "count": 20,
+      "cycle": 1,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0.10000002384185791,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83.5,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987736, 0, 0, 0.987736, 0, 0)",
+          "opacity": "0.591195",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.800000011921,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 20
+        }
+      ]
+    },
+    {
+      "count": 20,
+      "cycle": 2,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 20
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83.39999997615814,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987851, 0, 0, 0.987851, 0, 0)",
+          "opacity": "0.595034",
+          "rows": 20
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.5999999642372,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 20
+        }
+      ]
+    },
+    {
+      "count": 20,
+      "cycle": 3,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 20
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83.39999997615814,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987733, 0, 0, 0.987733, 0, 0)",
+          "opacity": "0.591114",
+          "rows": 20
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.2999999523163,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 20
+        }
+      ]
+    },
+    {
+      "count": 1,
+      "cycle": 1,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.98773, 0, 0, 0.98773, 0, 0)",
+          "opacity": "0.591003",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.5999999642372,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "count": 1,
+      "cycle": 2,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 1
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.30000001192093,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.98755, 0, 0, 0.98755, 0, 0)",
+          "opacity": "0.585013",
+          "rows": 1
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.5999999642372,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "count": 1,
+      "cycle": 3,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 1
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 81.59999996423721,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987729, 0, 0, 0.987729, 0, 0)",
+          "opacity": "0.590966",
+          "rows": 1
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1301.800000011921,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "count": 0,
+      "cycle": 1,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.10000002384186,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987572, 0, 0, 0.987572, 0, 0)",
+          "opacity": "0.585731",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.199999988079,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "count": 0,
+      "cycle": 2,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83.90000003576279,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.98783, 0, 0, 0.98783, 0, 0)",
+          "opacity": "0.594343",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.300000011921,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "count": 0,
+      "cycle": 3,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.29999995231628,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987703, 0, 0, 0.987703, 0, 0)",
+          "opacity": "0.590104",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1301.7999999523163,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "error",
+      "cycle": 1,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83.30000001192093,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987505, 0, 0, 0.987505, 0, 0)",
+          "opacity": "0.583508",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.5,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "error",
+      "cycle": 2,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.80000001192093,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.98759, 0, 0, 0.98759, 0, 0)",
+          "opacity": "0.586345",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.5,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "error",
+      "cycle": 3,
+      "viewport": 1280,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.30000001192093,
+          "width": 640,
+          "height": 640,
+          "transform": "matrix(0.987732, 0, 0, 0.987732, 0, 0)",
+          "opacity": "0.59107",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303,
+          "width": 640,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "count": 20,
+      "cycle": 1,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83.79999995231628,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987707, 0, 0, 0.987707, 0, 0)",
+          "opacity": "0.590237",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.2999999523163,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 20
+        }
+      ]
+    },
+    {
+      "count": 20,
+      "cycle": 2,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 20
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83.30000001192093,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987664, 0, 0, 0.987664, 0, 0)",
+          "opacity": "0.588806",
+          "rows": 20
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1304,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 20
+        }
+      ]
+    },
+    {
+      "count": 20,
+      "cycle": 3,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 20
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 83,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.98772, 0, 0, 0.98772, 0, 0)",
+          "opacity": "0.590672",
+          "rows": 20
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.699999988079,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 20
+        }
+      ]
+    },
+    {
+      "mode": "no-results",
+      "viewport": 375,
+      "layout": {
+        "height": 640,
+        "width": 343
+      },
+      "rows": 0
+    },
+    {
+      "mode": "1 recent",
+      "cycle": 1,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.69999998807907,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987733, 0, 0, 0.987733, 0, 0)",
+          "opacity": "0.591114",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.800000011921,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "mode": "1 recent",
+      "cycle": 2,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 1
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.09999996423721,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987722, 0, 0, 0.987722, 0, 0)",
+          "opacity": "0.590723",
+          "rows": 1
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.699999988079,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "mode": "1 recent",
+      "cycle": 3,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 1
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 81.70000004768372,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987502, 0, 0, 0.987502, 0, 0)",
+          "opacity": "0.583405",
+          "rows": 1
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.800000011921,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 1
+        }
+      ]
+    },
+    {
+      "mode": "0 recent",
+      "cycle": 1,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0.09999996423721313,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 81.80000001192093,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.98773, 0, 0, 0.98773, 0, 0)",
+          "opacity": "0.590996",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "0 recent",
+      "cycle": 2,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 81.19999998807907,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987732, 0, 0, 0.987732, 0, 0)",
+          "opacity": "0.59107",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302.300000011921,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "0 recent",
+      "cycle": 3,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 81.5,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987732, 0, 0, 0.987732, 0, 0)",
+          "opacity": "0.591062",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.2999999523163,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "error",
+      "cycle": 1,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 81.89999997615814,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987666, 0, 0, 0.987666, 0, 0)",
+          "opacity": "0.588872",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "error",
+      "cycle": 2,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 80.80000001192093,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.98772, 0, 0, 0.98772, 0, 0)",
+          "opacity": "0.590679",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1302,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    },
+    {
+      "mode": "error",
+      "cycle": 3,
+      "viewport": 375,
+      "samples": [
+        {
+          "phase": "before-paint",
+          "ms": 0,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.97, 0, 0, 0.97, 0, 0)",
+          "opacity": "0",
+          "rows": 0
+        },
+        {
+          "phase": "animation-middle",
+          "ms": 82.10000002384186,
+          "width": 343,
+          "height": 640,
+          "transform": "matrix(0.987867, 0, 0, 0.987867, 0, 0)",
+          "opacity": "0.595569",
+          "rows": 0
+        },
+        {
+          "phase": "after-delayed-api",
+          "ms": 1303.300000011921,
+          "width": 343,
+          "height": 640,
+          "transform": "none",
+          "opacity": "1",
+          "rows": 0
+        }
+      ]
+    }
+  ],
+  "focusChecks": [
+    {
+      "flow": "keyboard-Escape",
+      "focus": "搜索",
+      "marker": null,
+      "outline": "solid"
+    },
+    {
+      "flow": "keyboard-pointer",
+      "focus": "搜索",
+      "marker": "true",
+      "outline": "none"
+    },
+    {
+      "flow": "next-Tab",
+      "focus": "动态消息",
+      "outline": "solid",
+      "searchMarker": null
+    },
+    {
+      "flow": "input-pointer-backdrop",
+      "focus": "搜索",
+      "marker": "true",
+      "outline": "none"
+    }
+  ],
+  "targetVisible": true,
+  "safari": {
+    "status": "passed",
+    "date": "2026-10-09",
+    "evidence_type": "native-safari-ax-and-screenshot",
+    "cases": [
+      {
+        "case": "pointer close",
+        "logical_focus": "search",
+        "visible_ring": false,
+        "screenshot": "navi-safari-pointer-close.png"
+      },
+      {
+        "case": "keyboard Return open and Escape close",
+        "logical_focus": "search",
+        "visible_ring": true,
+        "screenshot": "navi-safari-keyboard-close.png"
+      },
+      {
+        "case": "keyboard open then pointer close",
+        "logical_focus": "search",
+        "visible_ring": false,
+        "screenshot": "navi-safari-mixed-close.png"
+      },
+      {
+        "case": "next Tab after pointer close",
+        "logical_focus": "source details summary",
+        "visible_ring": true,
+        "screenshot": "navi-safari-next-tab.png",
+        "note": "Safari current keyboard preference skips links; next eligible summary received visible focus."
+      },
+      {
+        "case": "type query then pointer backdrop close",
+        "logical_focus": "search",
+        "visible_ring": false,
+        "screenshot": "navi-safari-input-backdrop-close.png"
+      }
+    ],
+    "search_bar_focus": "outer bar includes icon and input, observed native screenshot",
+    "geometry_note": "Native Safari geometry measured separately: safari-geometry.json; ten conditions x three opens; desktop 1280x750 CSS, narrow via local-page zoom 512x300 CSS. Actual size restored."
+  },
+  "probe": "temporary layout-effect measurement removed after acceptance"
+}

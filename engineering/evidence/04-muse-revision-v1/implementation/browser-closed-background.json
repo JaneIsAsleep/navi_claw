@@ -1,0 +1,9 @@
+{
+  "evidence_type": "actual-background-without-browser",
+  "status": "passed",
+  "job_id": "5c2db1ba2fcf4091bd3e25de3ef49427",
+  "result": "",
+  "new_model_calls": 0,
+  "new_actions": 0,
+  "note": "真实运行中的单进程在关闭测试浏览器后自动调度，无来源和本机事项时静默完成。"
+}

@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-10-04T01:53:09.078368+00:00",
+  "evidence_type": "actual-daily-runtime-after-refinement",
+  "status": "passed",
+  "data_directory": "data",
+  "pid": 63627,
+  "parent_pid": 1,
+  "terminal": "??",
+  "checks": [
+    "通过 stop.command 正常停止并保存状态，再以 start.command --no-browser 恢复日常服务",
+    "重启后本项目健康检查就绪",
+    "启动器退出后进程由 PID 1 托管，无终端依赖"
+  ]
+}

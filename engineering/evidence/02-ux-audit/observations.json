@@ -1,0 +1,363 @@
+{
+  "audit_date": "2026-10-02",
+  "timezone": "Asia/Taipei",
+  "baseline_commit": "0dd28f5",
+  "scope": "Product and UX audit according to engineering/plans/optimize_plan.md; no product source modifications",
+  "evidence_types": [
+    "current UI observation",
+    "read-only DOM measurements",
+    "source inspection",
+    "offline test run"
+  ],
+  "environment": {
+    "navi_url": "http://127.0.0.1:8766",
+    "navi_desktop_css_viewport": [
+      1280,
+      802
+    ],
+    "muse_window_logical_size": [
+      1280,
+      802
+    ],
+    "muse_version_observed": "4.1",
+    "clean_install_tested": false
+  },
+  "verification": {
+    "launcher": {
+      "command": "./start.command",
+      "result": "ready",
+      "note": "Used authorized host execution to access localhost; existing Gateway was reused. Initial sandbox-local health probe failed; it is not classified as a product failure."
+    },
+    "offline_tests": {
+      "command": "./test",
+      "passed": 30,
+      "warnings": 1,
+      "duration_seconds": 3.42,
+      "warning": "Starlette TestClient httpx deprecation"
+    },
+    "live_suite": {
+      "command": "./test --live",
+      "run_this_audit": false
+    },
+    "manual_model_conversations": {
+      "successful_turns": 2,
+      "adapter": "production DeepSeek",
+      "results": [
+        "已收到",
+        "请问你今天最想推进的一件事是什么？有了它我再帮你安排今天的顺序。"
+      ]
+    },
+    "browser_reload": {
+      "selected_conversation_restored": true,
+      "messages_restored": true
+    },
+    "download": {
+      "existing_test_artifact": "界面验收文档",
+      "bytes": 154,
+      "sha256_matches_existing_export": true,
+      "downloaded_this_audit": true
+    },
+    "responsive": [
+      {
+        "viewport": [
+          375,
+          812
+        ],
+        "document_scroll_width": 375,
+        "composer_width": 351
+      },
+      {
+        "viewport": [
+          320,
+          740
+        ],
+        "document_scroll_width": 320,
+        "composer_bounds": {
+          "x": 12,
+          "y": 590,
+          "width": 296,
+          "height": 99
+        }
+      }
+    ],
+    "keyboard_modal": {
+      "viewport": [
+        320,
+        740
+      ],
+      "sequence": [
+        "Enter on 添加任务",
+        "Escape from 标题 input"
+      ],
+      "focus_while_open": "INPUT",
+      "focus_after_close": "BODY",
+      "expected_return": "添加任务 button",
+      "result": "focus restoration failure"
+    }
+  },
+  "current_navi_observations": {
+    "navigation_page_count": 11,
+    "desktop_column_widths": [
+      206,
+      226
+    ],
+    "sidebar_share_percent": 33.75,
+    "chat_text": {
+      "font_size_px": 15,
+      "line_height_px": 27.75
+    },
+    "initial_sessions": 5,
+    "initial_duplicate_blank_titles": 2,
+    "new_audit_session_count": 1,
+    "chat_management": {
+      "rename_entry": false,
+      "delete_entry": false,
+      "top_ellipsis_action": "direct model compaction; verified by source and accessible title, not clicked"
+    },
+    "history_search": {
+      "query": "今天最想推进",
+      "phrase_visible_in_assistant_message": true,
+      "matching_history_rows": 0,
+      "no_match_explanation": false,
+      "scope_from_source": "title only"
+    },
+    "memory": {
+      "existing_rows": 1,
+      "existing_row_disabled": true,
+      "editor_opened": true,
+      "changes_saved": false
+    },
+    "goals": {
+      "existing_rows": 0,
+      "add_form_opened": true,
+      "changes_saved": false,
+      "relationship_rendering": "source inspected only"
+    },
+    "tasks": {
+      "existing_rows": 1,
+      "existing_task_paused": true,
+      "create_form_opened": true,
+      "task_created": false
+    },
+    "inbox": {
+      "notifications_visible": 0,
+      "empty_state_mentions": "Heartbeat or scheduled tasks",
+      "inline_start_action": false
+    },
+    "feed_refresh": {
+      "all_followed_sources_paused": true,
+      "existing_feed_entries": 3,
+      "success_notice": "动态已刷新",
+      "checked_at_text_unchanged": "10/2 09:29",
+      "backend_skips_disabled_sources": true
+    },
+    "ideas": {
+      "existing_rows": 3,
+      "details_and_basis_opened": true,
+      "basis_rendering": "raw JSON"
+    },
+    "artifact_generation_entry": {
+      "result": "returns to chat and prefills prompt",
+      "job_automatically_started": false,
+      "prefill_cleared_without_sending": true
+    },
+    "settings": {
+      "opened": true,
+      "advanced_limits_expanded": true,
+      "credentials_read_or_modified": false,
+      "settings_saved": false
+    },
+    "approvals": {
+      "existing_rejected_and_delivered_examples_viewed": true,
+      "new_decision_submitted": false
+    }
+  },
+  "muse_observations": {
+    "new_chat_entry_opened": true,
+    "history_viewed": true,
+    "temporary_chat_title": "Navi UX Audit Temporary",
+    "rename_verified": true,
+    "chat_menu": [
+      "pin",
+      "rename",
+      "archive",
+      "delete"
+    ],
+    "delete": {
+      "entry_verified": true,
+      "final_action_performed": false,
+      "reason": "Awaiting action-time confirmation for potentially irreversible deletion"
+    },
+    "history_row": "Recency text and ellipsis visible in pointer/row-focus state; separate pure hover condition unverified",
+    "memory_path": [
+      "chat avatar",
+      "身分",
+      "記憶"
+    ],
+    "memory_surface": "MEMORY.md editor",
+    "memory_modified": false,
+    "goals_opened": true,
+    "feed_opened": true,
+    "feed_discussion_opened": true,
+    "feed_discussion_result": "split chat with quoted input; quote subsequently dismissed without sending",
+    "ideas_opened": true,
+    "artifact_library_opened": true,
+    "settings_opened": true,
+    "private_content_saved_to_repository": false,
+    "input_tool_incident": "Native paste unexpectedly inserted audit brief rather than requested sample. This is separated from product findings. Assistant output was not treated as audit evidence."
+  },
+  "contrast_calculations": [
+    {
+      "role": "welcome description",
+      "foreground": "#75808a",
+      "background": "#ffffff",
+      "ratio_rounded": 4.03
+    },
+    {
+      "role": "metadata",
+      "foreground": "#7e8a93",
+      "background": "#ffffff",
+      "ratio_rounded": 3.53
+    },
+    {
+      "role": "composer footer",
+      "foreground": "#8a949b",
+      "background": "#ffffff",
+      "ratio_rounded": 3.09
+    },
+    {
+      "role": "speaker",
+      "foreground": "#858e96",
+      "background": "#ffffff",
+      "ratio_rounded": 3.33
+    }
+  ],
+  "external_method_sources": [
+    "https://www.nngroup.com/articles/ten-usability-heuristics/",
+    "https://www.nngroup.com/articles/progressive-disclosure/",
+    "https://www.w3.org/TR/wcag/#content-on-hover-or-focus",
+    "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html",
+    "https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html"
+  ],
+  "screenshots": [
+    {
+      "file": "navi-approvals.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-artifact-list.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-chat-320.jpg",
+      "format": "jpeg",
+      "pixel_width": 320,
+      "pixel_height": 740
+    },
+    {
+      "file": "navi-chat-375.jpg",
+      "format": "jpeg",
+      "pixel_width": 375,
+      "pixel_height": 812
+    },
+    {
+      "file": "navi-chat-desktop.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-chat-reply.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-feed-paused.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-history-375.jpg",
+      "format": "jpeg",
+      "pixel_width": 375,
+      "pixel_height": 812
+    },
+    {
+      "file": "navi-history-no-match.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-idea-basis.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-inbox-empty.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-memory.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-natural-reply.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-settings.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-task-form.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    },
+    {
+      "file": "navi-tasks-320.jpg",
+      "format": "jpeg",
+      "pixel_width": 320,
+      "pixel_height": 740
+    },
+    {
+      "file": "navi-tasks-desktop.jpg",
+      "format": "jpeg",
+      "pixel_width": 1280,
+      "pixel_height": 802
+    }
+  ],
+  "not_reexecuted": [
+    "clean installation and missing-key onboarding",
+    "long conversation compaction",
+    "full live acceptance suite",
+    "stop/restart lifecycle",
+    "fresh scheduled-task delivery",
+    "new approval/export proposal",
+    "existing memory toggle or delete",
+    "permanent Muse chat deletion",
+    "isolated pure-hover behavior",
+    "mobile software keyboard",
+    "comprehensive WCAG audit"
+  ],
+  "source_code_modified": false,
+  "committed": false,
+  "pushed": false,
+  "published": false
+}

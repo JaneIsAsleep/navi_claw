@@ -1,0 +1,6 @@
+{
+  "evidence_type": "personal-runtime",
+  "pid": 8980,
+  "instance": "a5715bfea05f88c4e6b5e1d496bf7e5d",
+  "process": "1 ??       /Library/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m navi.server"
+}

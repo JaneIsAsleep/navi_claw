@@ -1,0 +1,21 @@
+{
+  "evidence_type": "isolated-offline-ui",
+  "status": "passed",
+  "before": {
+    "sessions": 4,
+    "messages": 42,
+    "jobs": 0,
+    "usage": 0
+  },
+  "after": {
+    "sessions": 4,
+    "messages": 42,
+    "jobs": 0,
+    "usage": 0
+  },
+  "conditions": [
+    "archived returns existing main",
+    "goal guidance returns existing main",
+    "main draft unchanged"
+  ]
+}

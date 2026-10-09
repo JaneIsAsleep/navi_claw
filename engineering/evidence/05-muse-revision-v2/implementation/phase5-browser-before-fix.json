@@ -1,0 +1,493 @@
+{
+  "evidence_type": "isolated-offline-ui-fixture",
+  "status": "failed",
+  "failure": "hidden feed polling overwrote reading anchor with zero after 2800ms",
+  "checks": [
+    {
+      "label": "desktop first page",
+      "anchor": "df3e6ba859424eb882a10b83a8a55921",
+      "count": 20,
+      "failedImages": 0,
+      "height": 742,
+      "offset": -73.46875,
+      "refs": [],
+      "top": 6252.5,
+      "unique": 20,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "manual next page loaded after earlier automatic failure",
+      "anchor": "8024aaa2b2784b6ea6cc690face0c7a1",
+      "count": 40,
+      "failedImages": 0,
+      "height": 742,
+      "offset": -37.125,
+      "refs": [],
+      "top": 7478.5,
+      "unique": 40,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "automatic next page failed",
+      "anchor": "2ca103bca545405ab0d379d581371e3d",
+      "count": 40,
+      "failedImages": 0,
+      "height": 742,
+      "offset": -37.3125,
+      "refs": [],
+      "top": 13833.5,
+      "unique": 40,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "visible pagination error retains forty rows",
+      "anchor": "2ca103bca545405ab0d379d581371e3d",
+      "count": 40,
+      "failedImages": 0,
+      "height": 742,
+      "offset": -76.3125,
+      "refs": [],
+      "top": 13872.5,
+      "unique": 40,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "retry loads page three sixty rows",
+      "anchor": "2ca103bca545405ab0d379d581371e3d",
+      "count": 60,
+      "failedImages": 0,
+      "height": 742,
+      "offset": -37.3125,
+      "refs": [],
+      "top": 13833.5,
+      "unique": 60,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "automatic page four sixty five unique rows",
+      "anchor": "12339c794e0b4ea5bfc8f817bf2a8517",
+      "count": 65,
+      "failedImages": 0,
+      "height": 742,
+      "offset": -37,
+      "refs": [],
+      "top": 20188,
+      "unique": 65,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "desktop before discussion",
+      "anchor": "12339c794e0b4ea5bfc8f817bf2a8517",
+      "count": 65,
+      "failedImages": 0,
+      "height": 742,
+      "offset": -37,
+      "refs": [],
+      "top": 20188,
+      "unique": 65,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "settled desktop before discussion",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "count": 65,
+      "failedImages": 3,
+      "height": 742,
+      "offset": -349.84375,
+      "refs": [],
+      "top": 2220,
+      "unique": 65,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "desktop discussion preserves draft and reading anchor",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 8537,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.640625,
+      "refs": [
+        "移除引用 临时阅读材料 02"
+      ],
+      "top": 2024,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "desktop paired settled",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 8537,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.640625,
+      "refs": [
+        "移除引用 临时阅读材料 02"
+      ],
+      "top": 2024,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "desktop close 1",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "count": 65,
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.84375,
+      "refs": [],
+      "top": 2179,
+      "unique": 65,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "desktop reopen 1",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 8537,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.640625,
+      "refs": [
+        "移除引用 临时阅读材料 02"
+      ],
+      "top": 2024,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "desktop close 2",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "count": 65,
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.84375,
+      "refs": [],
+      "top": 2179,
+      "unique": 65,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "desktop reopen 2",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 8537,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.640625,
+      "refs": [
+        "移除引用 临时阅读材料 02"
+      ],
+      "top": 2024,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "desktop close 3",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "count": 65,
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.84375,
+      "refs": [],
+      "top": 2179,
+      "unique": 65,
+      "url": "#feed",
+      "width": 1204
+    },
+    {
+      "label": "desktop reopen 3",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 8537,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -308.640625,
+      "refs": [
+        "移除引用 临时阅读材料 02"
+      ],
+      "top": 2024,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "new feed reference replaces only previous feed reference",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 12124,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -547.140625,
+      "refs": [
+        "移除引用 Navi 回复",
+        "移除引用 临时阅读材料 03"
+      ],
+      "top": 2262.5,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "feed reference removed keeps draft and other reference",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 12044.5,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -547.140625,
+      "refs": [
+        "移除引用 Navi 回复"
+      ],
+      "top": 2262.5,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "chat before full view",
+      "chat": {
+        "anchor": "feed-chat-17",
+        "height": 482.40625,
+        "offset": -56.9453125,
+        "top": 5384,
+        "width": 480.59375
+      }
+    },
+    {
+      "label": "feed before full chat",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 5384,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -547.140625,
+      "refs": [
+        "移除引用 Navi 回复"
+      ],
+      "top": 2262.5,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "full chat",
+      "chat": {
+        "anchor": "feed-chat-23",
+        "height": 478.40625,
+        "offset": -158.8515625,
+        "top": 5384,
+        "width": 964
+      }
+    },
+    {
+      "label": "chat after returning to pair",
+      "chat": {
+        "anchor": "feed-chat-17",
+        "height": 482.40625,
+        "offset": -56.9453125,
+        "top": 5384,
+        "width": 480.59375
+      }
+    },
+    {
+      "label": "feed after returning to pair",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 5384,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -547.140625,
+      "refs": [
+        "移除引用 Navi 回复"
+      ],
+      "top": 2262.5,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "five references before feed discussion",
+      "anchor": "d4c14e04b612481b888cac8dfe59f2eb",
+      "chatTop": 11017.5,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -547.140625,
+      "refs": [
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复"
+      ],
+      "top": 2262.5,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "five reference limit preserves all references and draft",
+      "anchor": "d44d0233c8dd4fc8a0f024700575a127",
+      "chatTop": 11017.5,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -145.703125,
+      "refs": [
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复",
+        "移除引用 Navi 回复"
+      ],
+      "top": 2578,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "same feed repeated discussion keeps one pending reference",
+      "anchor": "d44d0233c8dd4fc8a0f024700575a127",
+      "chatTop": 11017.5,
+      "chatWidth": 480.59375,
+      "count": 65,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -145.703125,
+      "refs": [
+        "移除引用 临时阅读材料 04"
+      ],
+      "top": 2578,
+      "unique": 65,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "new batch polling preserves anchor and all four pages",
+      "anchor": "d44d0233c8dd4fc8a0f024700575a127",
+      "chatTop": 11017.5,
+      "chatWidth": 480.59375,
+      "count": 66,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 742,
+      "offset": -145.7109375,
+      "refs": [
+        "移除引用 临时阅读材料 04"
+      ],
+      "top": 2836,
+      "unique": 66,
+      "url": "#feed",
+      "width": 722.40625
+    },
+    {
+      "label": "narrow chat view hidden feed",
+      "chatTop": 11017.5,
+      "chatWidth": 375,
+      "count": 66,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 0,
+      "offset": null,
+      "refs": [
+        "移除引用 临时阅读材料 04"
+      ],
+      "top": 0,
+      "unique": 66,
+      "url": "#feed",
+      "width": 0
+    },
+    {
+      "label": "narrow returns to feed",
+      "anchor": "d44d0233c8dd4fc8a0f024700575a127",
+      "chatTop": 0,
+      "chatWidth": 0,
+      "count": 66,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 692,
+      "offset": -145.8984375,
+      "refs": [
+        "移除引用 临时阅读材料 04"
+      ],
+      "top": 2702,
+      "unique": 66,
+      "url": "#feed",
+      "width": 375
+    },
+    {
+      "label": "narrow hidden feed after actual polling",
+      "chatTop": 11017.5,
+      "chatWidth": 375,
+      "count": 66,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 0,
+      "offset": null,
+      "refs": [
+        "移除引用 临时阅读材料 04"
+      ],
+      "top": 0,
+      "unique": 66,
+      "url": "#feed",
+      "width": 0
+    },
+    {
+      "label": "narrow feed after hidden polling",
+      "anchor": "ca14865d612740d39e3f9ea39887d8e2",
+      "chatTop": 0,
+      "chatWidth": 0,
+      "count": 66,
+      "draft": "V2 草稿：保持这句话，暂时不发送。",
+      "failedImages": 3,
+      "height": 692,
+      "offset": 291.6796875,
+      "refs": [
+        "移除引用 临时阅读材料 04"
+      ],
+      "top": 0,
+      "unique": 66,
+      "url": "#feed",
+      "width": 375
+    }
+  ]
+}

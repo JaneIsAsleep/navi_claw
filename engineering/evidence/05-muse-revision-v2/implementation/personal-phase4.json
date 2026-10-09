@@ -1,0 +1,57 @@
+{
+  "before": {
+    "jobs": 36,
+    "requests": 144,
+    "source_ids": [
+      "source-nasa",
+      "source-openai",
+      "source-python"
+    ]
+  },
+  "after": {
+    "jobs": 36,
+    "requests": 188,
+    "custom_source": {
+      "id": "source-custom-e06750e8538cef46cb4aa655",
+      "kind": "source",
+      "payload": {
+        "source_id": "custom-e06750e8538cef46cb4aa655",
+        "source_type": "custom",
+        "url": "https://github.blog/feed/",
+        "title": "GitHub Blog · V2 验收",
+        "enabled": false,
+        "last_checked": 1791455182.48217,
+        "last_success": 1791455182.48217,
+        "last_error": ""
+      },
+      "created": 1791455182.482172,
+      "updated": 1791455196.169802,
+      "source_session": null
+    }
+  },
+  "preview_changed_clears_confirm": true,
+  "paused_resumed_then_paused_same_id": true,
+  "global_usage_note": "隔离真实验收同时运行，调用预算计入个人统计；最终零调用检查另做",
+  "zero_check_before": {
+    "jobs": 36,
+    "requests": 209,
+    "source_ids": [
+      "source-custom-e06750e8538cef46cb4aa655",
+      "source-nasa",
+      "source-openai",
+      "source-python"
+    ]
+  },
+  "zero_check_after": {
+    "jobs": 36,
+    "requests": 209,
+    "source_ids": [
+      "source-custom-e06750e8538cef46cb4aa655",
+      "source-nasa",
+      "source-openai",
+      "source-python"
+    ]
+  },
+  "zero_check_passed": true,
+  "html_preview_error_visible": true
+}

@@ -1,0 +1,11 @@
+{
+  "evidence_type": "isolated-offline-browser",
+  "double_410_retries_once": true,
+  "retry_ids": [
+    "2a43d63a-3a87-4d61-bd82-f56f0705472d",
+    "6a8111ad-0aa7-478b-814e-f548643c115e"
+  ],
+  "other_failures_keep_request_id": true,
+  "request_count_without_automatic_retry": 2,
+  "completed_task_survives_reactivate": true
+}

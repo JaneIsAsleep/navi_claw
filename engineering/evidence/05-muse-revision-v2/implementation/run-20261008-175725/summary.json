@@ -1,0 +1,35 @@
+{
+  "phase": 2,
+  "groups": {
+    "basic": {
+      "status": "not-executed"
+    },
+    "refinement": {
+      "status": "passed",
+      "report": "engineering/evidence/05-muse-revision-v2/implementation/run-20261008-175725/refinement.json",
+      "requests": 14,
+      "input_tokens": 32433,
+      "output_tokens": 1520,
+      "estimated_requests": 0
+    },
+    "muse-v1": {
+      "status": "passed",
+      "report": "engineering/evidence/05-muse-revision-v2/implementation/run-20261008-175725/muse-v1.json",
+      "requests": 25,
+      "input_tokens": 34057,
+      "output_tokens": 3443,
+      "estimated_requests": 0
+    },
+    "muse-v2": {
+      "status": "passed",
+      "report": "engineering/evidence/05-muse-revision-v2/implementation/run-20261008-175725/muse-v2.json",
+      "requests": 15,
+      "input_tokens": 22616,
+      "output_tokens": 3281,
+      "estimated_requests": 0
+    }
+  },
+  "real_0600": "pending-real-observation",
+  "real_sleep_recovery": "pending-real-observation",
+  "long_trial": "pending-real-use"
+}

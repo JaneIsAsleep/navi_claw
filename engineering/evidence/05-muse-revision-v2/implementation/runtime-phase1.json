@@ -1,0 +1,14 @@
+{
+  "phase": 1,
+  "checked_at": "2026-10-08T13:49:02.108824+08:00",
+  "status": "passed",
+  "checks": [
+    "三个 command 入口实际运行",
+    "重复启动复用同一进程",
+    "PPID=1 且无终端，启动命令已退出",
+    "实际停止并重启，原会话/记录/任务/行动 ID 保持",
+    "CLI/Web 会话一致"
+  ],
+  "data_path": "data",
+  "new_instance": true
+}

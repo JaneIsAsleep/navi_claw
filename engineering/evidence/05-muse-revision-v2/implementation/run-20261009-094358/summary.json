@@ -1,0 +1,25 @@
+{
+  "phase": 5,
+  "groups": {
+    "basic": {
+      "status": "passed",
+      "report": "engineering/evidence/05-muse-revision-v2/implementation/run-20261009-094358/basic.json",
+      "requests": 11,
+      "input_tokens": 24908,
+      "output_tokens": 2005,
+      "estimated_requests": 0
+    },
+    "refinement": {
+      "status": "not-executed"
+    },
+    "muse-v1": {
+      "status": "not-executed"
+    },
+    "muse-v2": {
+      "status": "not-executed"
+    }
+  },
+  "real_0600": "pending-real-observation",
+  "real_sleep_recovery": "pending-real-observation",
+  "long_trial": "pending-real-use"
+}

@@ -1,0 +1,19 @@
+{
+  "evidence_type": "personal-sqlite-read-only-compare",
+  "status": "passed",
+  "compared_fields": "session title, compressed history, goal setup, identity and state; message content, references and links; goal/memory/artifact payloads; unread/updated excluded",
+  "results": {
+    "sessions": {
+      "original_rows": 7,
+      "mismatches": 0
+    },
+    "messages": {
+      "original_rows": 34,
+      "mismatches": 0
+    },
+    "records": {
+      "original_rows": 5,
+      "mismatches": 0
+    }
+  }
+}

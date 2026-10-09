@@ -1,0 +1,27 @@
+{
+  "evidence_type": "isolated-offline-ui",
+  "fixtures": [
+    {
+      "id": "f17e49005cf44ac9a2915de6b7777bd7",
+      "title": "V2归档回退验收",
+      "state": "archived",
+      "setup": {}
+    },
+    {
+      "id": "f87fc1e946674b4798acb31a0bb102c5",
+      "title": "V2目标引导回退验收",
+      "state": "active",
+      "setup": {
+        "category": "health",
+        "status": "discussing",
+        "version": 1
+      }
+    }
+  ],
+  "counts": {
+    "sessions": 4,
+    "messages": 42,
+    "jobs": 0,
+    "usage": 0
+  }
+}

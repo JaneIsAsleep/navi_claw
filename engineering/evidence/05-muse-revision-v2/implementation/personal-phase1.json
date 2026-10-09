@@ -1,0 +1,70 @@
+{
+  "phase": 1,
+  "checked_at": "2026-10-08T13:50:23.670811+08:00",
+  "schema": 5,
+  "original_sessions_messages_unchanged": true,
+  "original_goals_memories_artifacts_unchanged": true,
+  "today_feed_job_and_receipt_unchanged": true,
+  "today_generated_feed_count": 3,
+  "ideas_job": {
+    "id": "05e63b81468d42558a133323a615955b",
+    "status": "succeeded",
+    "attempt": 2,
+    "error_code": "",
+    "recovery_count": 1
+  },
+  "ideas_usage": [
+    {
+      "id": "c6483bfd47084405b89fc833c970a630",
+      "job_id": "05e63b81468d42558a133323a615955b",
+      "input_tokens": 6880,
+      "output_tokens": 4096,
+      "estimated": 1,
+      "created": 1791411387.6666298
+    },
+    {
+      "id": "250201d3870f430bb2c9c9a8e15af485",
+      "job_id": "05e63b81468d42558a133323a615955b",
+      "input_tokens": 1940,
+      "output_tokens": 970,
+      "estimated": 0,
+      "created": 1791438481.188568
+    }
+  ],
+  "current_ideas": [
+    {
+      "id": "990ed4ff9ef14119adf62d57bffe6732",
+      "title": "整理 GPT-6 发布要点",
+      "action_kind": "source_summary"
+    },
+    {
+      "id": "50f2e1e0da994579935edbcac1092efd",
+      "title": "汇总 ChatGPT 行业应用案例",
+      "action_kind": "source_summary"
+    },
+    {
+      "id": "a5dad76d5e4046ac8cdfb1cbaf93fe2f",
+      "title": "起草 LLM 进展速览文档",
+      "action_kind": "document_draft"
+    },
+    {
+      "id": "540176877e224636b1095833ab1322f3",
+      "title": "拆解深入了解 LLM 进展的步骤",
+      "action_kind": "goal_breakdown"
+    },
+    {
+      "id": "0211046fc851415ea4ed50cb6c83af5a",
+      "title": "整理青少年 AI 教育功能要点",
+      "action_kind": "source_summary"
+    }
+  ],
+  "local_starts": [
+    {
+      "id": "2592d5a6d52a48b5b04944a00c080b9e",
+      "status": "succeeded",
+      "session_id": "36edee78445d4724a25436df7766789e"
+    }
+  ],
+  "real_0600": "pending-real-observation",
+  "real_sleep_recovery": "pending-real-observation"
+}

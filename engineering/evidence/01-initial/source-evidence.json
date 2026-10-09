@@ -1,0 +1,133 @@
+{
+  "timestamp": "2026-10-02T01:31:25.999721+00:00",
+  "evidence_type": "actual-public-rss",
+  "status": "passed",
+  "sources": [
+    {
+      "id": "openai",
+      "title": "OpenAI 官方动态",
+      "url": "https://openai.com/news/rss.xml"
+    },
+    {
+      "id": "python",
+      "title": "Python 官方博客",
+      "url": "https://blog.python.org/feeds/posts/default?alt=rss"
+    },
+    {
+      "id": "nasa",
+      "title": "NASA 官方新闻",
+      "url": "https://www.nasa.gov/news-release/feed/"
+    }
+  ],
+  "items": [
+    {
+      "id": "rss-67e23b47dcfb6771e5396169",
+      "title": "The eternal complement",
+      "body": "Advanced AI may matter most for the routine work behind breakthrough ideas. Explore why execution could shape the next economy and the pace of progress.",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "OpenAI 官方动态",
+      "source_url": "https://openai.com/index/the-eternal-complement",
+      "updated_at": 1790874000.0,
+      "published_at": "2026-10-01T17:00:00+00:00"
+    },
+    {
+      "id": "rss-2581edacb8fc4b9a397a7d71",
+      "title": "How Albertsons Companies is reimagining retail from the inside out",
+      "body": "Albertsons Cos. is using ChatGPT Enterprise and the OpenAI API to help teams work faster and make grocery shopping easier for millions of customers.",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "OpenAI 官方动态",
+      "source_url": "https://openai.com/index/albertsons-reimagining-retail",
+      "updated_at": 1790870400.0,
+      "published_at": "2026-10-01T16:00:00+00:00"
+    },
+    {
+      "id": "rss-6eeb8da33b252f6ad9df4953",
+      "title": "The Den frees up 10-15 hours a week to grow with ChatGPT Work",
+      "body": "As it opens a new location, the social club prepares grant applications in 2 hours instead of 3 days and liquor-license materials in 3 hours instead of 4 days.",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "OpenAI 官方动态",
+      "source_url": "https://openai.com/index/the-den-family-social",
+      "updated_at": 1790812800.0,
+      "published_at": "2026-10-01T00:00:00+00:00"
+    },
+    {
+      "id": "rss-14da1c0148150a5a0084f797",
+      "title": "Python 3.10.22, 3.11.17, 3.12.15, 3.13.16 and 3.14.8 are now available!",
+      "body": "Security updates across Python 3.10–3.14, the final maintenance release of 3.13, and a farewell to Python 3.10.",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "Python 官方博客",
+      "source_url": "https://blog.python.org/2026/10/python-31022-31117/",
+      "updated_at": 1790812800.0,
+      "published_at": "2026-10-01T00:00:00+00:00"
+    },
+    {
+      "id": "rss-48614720c0a379b236cef7d4",
+      "title": "Python Language Summit 2026",
+      "body": "The 2026 Python Language Summit was hosted in Kraków, Poland as part of EuroPython 2026. There were 15 talks covering free-threading, Rust, garbage collection, type annotations, an",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "Python 官方博客",
+      "source_url": "https://blog.python.org/2026/09/language-summit-2026/",
+      "updated_at": 1790769611.0,
+      "published_at": "2026-09-30T12:00:11+00:00"
+    },
+    {
+      "id": "rss-b94475672ea37483422ad321",
+      "title": "Lightning Talks (Python Language Summit 2026)",
+      "body": "Lightning talks on a one-time ABI break, safer interruptions, EktuPy (Scratch but Python), an AGENTS.md file for CPython, and a call to read PEP 836.",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "Python 官方博客",
+      "source_url": "https://blog.python.org/2026/09/language-summit-2026-lightning-talks/",
+      "updated_at": 1790769610.0,
+      "published_at": "2026-09-30T12:00:10+00:00"
+    },
+    {
+      "id": "rss-23d9afda5ba39800de0cfd8f",
+      "title": "10 Things: Movie Night",
+      "body": "Join Us for Movie Night with NASA NASA’s mission is to pioneer the future in space exploration and scientific discovery. NASA+ documentaries allow you to come along for the ride. I",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "NASA 官方新闻",
+      "source_url": "https://science.nasa.gov/solar-system/10-things-movie-night/",
+      "updated_at": 1790900736.0,
+      "published_at": "2026-10-02T00:25:36+00:00"
+    },
+    {
+      "id": "rss-7e5c63d7a8aec4480b76539a",
+      "title": "NASA Awards Enterprise Logistics Support Services Agreements",
+      "body": "NASA selected 16 companies to provide Enterprise Logistics Support Services under new agreements that will standardize requirements, improve reporting, and streamline the managemen",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "NASA 官方新闻",
+      "source_url": "https://www.nasa.gov/news-release/nasa-awards-enterprise-logistics-support-services-agreements/",
+      "updated_at": 1790886867.0,
+      "published_at": "2026-10-01T20:34:27+00:00"
+    },
+    {
+      "id": "rss-5de8c1d318b2d90b6e101ec2",
+      "title": "NASA’s SpaceX Crew-13 Launches",
+      "body": "In this Oct. 1, 2026, photo, a SpaceX Falcon 9 rocket and Dragon spacecraft launch from Space Launch Complex 40 at Cape Canaveral Space Force Station in Florida. The spacecraft is ",
+      "priority": 2,
+      "done": false,
+      "due_at": null,
+      "source": "NASA 官方新闻",
+      "source_url": "https://www.nasa.gov/image-article/nasas-spacex-crew-13-launches/",
+      "updated_at": 1790877938.0,
+      "published_at": "2026-10-01T18:05:38+00:00"
+    }
+  ],
+  "errors": []
+}

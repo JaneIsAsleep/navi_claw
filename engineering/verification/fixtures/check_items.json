@@ -1,0 +1,4 @@
+[
+  {"id": "fixture-important", "title": "检查原始工程验收清单", "body": "固定验收样例，重要程度为 3。", "priority": 3, "done": false, "source_url": "", "due_at": null},
+  {"id": "fixture-deadline", "title": "整理阶段性交付说明", "body": "固定验收样例，截止时间由演示程序设置为未来一小时。", "priority": 1, "done": false, "source_url": "", "due_offset_seconds": 3600}
+]

@@ -1,0 +1,13 @@
+{
+  "health": {
+    "name": "Navi",
+    "ready": true,
+    "instance": "eb4a1693c7336be556b95ad3fe9d534c",
+    "project_id": "8715fbf954caf1f60dc0accd",
+    "pid": 9321
+  },
+  "process": "9321     1 ??",
+  "cli_web_record_ids_equal": true,
+  "custom_source_preserved": "source-custom-e06750e8538cef46cb4aa655",
+  "command_trio_retained": true
+}

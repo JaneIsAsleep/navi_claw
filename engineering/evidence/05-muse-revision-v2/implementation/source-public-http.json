@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-10-08T18:23:59.729002+08:00",
+  "url": "https://github.blog/feed/",
+  "http_status": 200,
+  "bytes": 1242385,
+  "mime": "application/rss+xml",
+  "items": [
+    {
+      "title": "Secret protection must scale with software",
+      "source_url": "https://github.blog/ai-and-ml/github-copilot/secret-protection-must-scale-with-software/",
+      "published_at": "2026-10-07T17:45:34+00:00"
+    },
+    {
+      "title": "Building Git infrastructure for agent-scale development",
+      "source_url": "https://github.blog/engineering/architecture-optimization/building-git-infrastructure-for-agent-scale-development/",
+      "published_at": "2026-10-06T20:57:56+00:00"
+    },
+    {
+      "title": "ReviewBench: An open benchmark for AI code review",
+      "source_url": "https://github.blog/ai-and-ml/github-copilot/reviewbench-an-open-benchmark-for-ai-code-review/",
+      "published_at": "2026-10-05T15:59:40+00:00"
+    }
+  ]
+}

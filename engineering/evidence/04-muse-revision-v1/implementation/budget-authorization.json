@@ -1,0 +1,10 @@
+{
+  "daily_requests": 300,
+  "daily_tokens": 300000,
+  "usage_before": {
+    "requests": 100,
+    "tokens": 157970
+  },
+  "authorization": "继续所有的真实验收 使用限额为每天300次请求300000tokens",
+  "retained_after_acceptance": true
+}

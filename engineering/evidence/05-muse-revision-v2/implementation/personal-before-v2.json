@@ -1,0 +1,60 @@
+{
+  "backup_path": "/Users/hezijing/01_Study/OOAD/Navi_claw/data/backups/navi-before-v2-20261008-134010.sqlite3",
+  "schema": 4,
+  "counts": {
+    "sessions": 7,
+    "messages": 34,
+    "records": 32,
+    "tasks": 1,
+    "schedules": 1,
+    "jobs": 29,
+    "attempts": 27,
+    "usage": 263,
+    "actions": 2,
+    "outbox": 1
+  },
+  "daily_limits": {
+    "daily_requests": "300",
+    "daily_tokens": "300000"
+  },
+  "automatic_jobs": [
+    {
+      "id": "6d24ffcec5094eaa8693dd8eb4ff5347",
+      "kind": "feed",
+      "status": "failed",
+      "trigger_key": "daily:feed:2026-10-07",
+      "attempt": 1,
+      "updated": 1791352258.044331
+    },
+    {
+      "id": "2b8b2b3258f5447b94212628acbc3e41",
+      "kind": "ideas",
+      "status": "failed",
+      "trigger_key": "daily:ideas:2026-10-07",
+      "attempt": 1,
+      "updated": 1791352261.148837
+    },
+    {
+      "id": "02a28c2d04b9421a936051c412642433",
+      "kind": "feed",
+      "status": "succeeded",
+      "trigger_key": "daily:feed:2026-10-08",
+      "attempt": 1,
+      "updated": 1791411385.890951
+    },
+    {
+      "id": "05e63b81468d42558a133323a615955b",
+      "kind": "ideas",
+      "status": "failed",
+      "trigger_key": "daily:ideas:2026-10-08",
+      "attempt": 1,
+      "updated": 1791414088.9434218
+    }
+  ],
+  "goal_links": [
+    [
+      "fb611dc80b994460a934ae74af68b56f",
+      "290b8dab2a004d64b0a60fc28dba1464"
+    ]
+  ]
+}

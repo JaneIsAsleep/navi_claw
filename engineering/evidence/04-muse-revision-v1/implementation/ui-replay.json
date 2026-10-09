@@ -1,0 +1,8 @@
+{
+  "evidence_type": "offline-ui-replay",
+  "source": "engineering/verification/state/muse-revision-live-303k1l56",
+  "session_id": "af32cb643b2f4906a61172215fc36ddf",
+  "card_id": "fb63a7b71e1a418ab71aca61f2ae0ad0",
+  "goal_id": "007e6b2aa4254234af9591770eee1263",
+  "note": "选项文字来自已完成的真实 DeepSeek 请求，当前卡片和目标用于隔离 UI 回放，不作为新的真实调用证据。"
+}

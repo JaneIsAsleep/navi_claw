@@ -1,0 +1,14 @@
+{
+  "status": "running",
+  "directory": "data",
+  "pid": 88797,
+  "CLI_Web_same_sessions": true,
+  "daily_tokens": 300000,
+  "daily_requests": 300,
+  "usage_requests": 164,
+  "usage_tokens": 265398,
+  "schema": 4,
+  "preview_stopped": true,
+  "checked_at": "2026-10-07T06:23:13.713771+00:00",
+  "usage_estimated": 1
+}

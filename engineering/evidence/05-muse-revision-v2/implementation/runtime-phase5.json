@@ -1,0 +1,67 @@
+{
+  "evidence_type": "personal-detached-runtime",
+  "initial_health": {
+    "name": "Navi",
+    "ready": true,
+    "instance": "8968084731f0843438e67d17948de6bb",
+    "project_id": "8715fbf954caf1f60dc0accd",
+    "pid": 16746
+  },
+  "initial_ppid_tty": "1 ??",
+  "repeat_start_same_process": true,
+  "restarted_health": {
+    "name": "Navi",
+    "ready": true,
+    "instance": "512fe80944d6e04ceb8ccddea03f2d9a",
+    "project_id": "8715fbf954caf1f60dc0accd",
+    "pid": 17076
+  },
+  "restarted_ppid_tty": "1 ??",
+  "actual_stop_observed": true,
+  "cli_web_session_record_ids_equal": true,
+  "status": "passed",
+  "command_trio_verified": true,
+  "daily_success_ids_attempts_unchanged": [
+    {
+      "id": "1d04621e6b9a453693ea609b1b681bf4",
+      "kind": "feed",
+      "status": "succeeded",
+      "attempt": 1,
+      "recovery_count": 0,
+      "trigger_key": "daily:feed:2026-10-09"
+    },
+    {
+      "id": "76c2502ec90043868773cbfe330c3eec",
+      "kind": "ideas",
+      "status": "succeeded",
+      "attempt": 1,
+      "recovery_count": 0,
+      "trigger_key": "daily:ideas:2026-10-09"
+    }
+  ],
+  "development_log_preserved": true,
+  "finished_at": "2026-10-09T03:44:17Z",
+  "final_source_states": [
+    {
+      "id": "source-python",
+      "enabled": true,
+      "state": null
+    },
+    {
+      "id": "source-openai",
+      "enabled": true,
+      "state": null
+    },
+    {
+      "id": "source-nasa",
+      "enabled": true,
+      "state": null
+    },
+    {
+      "id": "source-custom-e06750e8538cef46cb4aa655",
+      "enabled": false,
+      "state": null
+    }
+  ],
+  "successful_batches_checked_after_awake_seconds": 299.4
+}

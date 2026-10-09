@@ -1,0 +1,60 @@
+{
+  "evidence_type": "personal-live-ui",
+  "session_id": "36edee78445d4724a25436df7766789e",
+  "before_discussion": {
+    "sessions": 9,
+    "messages": 42,
+    "jobs": 38,
+    "usage": 714
+  },
+  "after_discussion": {
+    "sessions": 9,
+    "messages": 42,
+    "jobs": 38,
+    "usage": 714
+  },
+  "click_status": "passed-zero-writes-and-zero-model",
+  "after_send": {
+    "sessions": 9,
+    "messages": 44,
+    "jobs": 39,
+    "usage": 715
+  },
+  "job": {
+    "id": "cf0864d8821245918033b32807552007",
+    "kind": "chat",
+    "status": "succeeded",
+    "attempt": 1,
+    "created": 1791516900.4009988,
+    "updated": 1791516901.42125
+  },
+  "model": "deepseek-flash",
+  "usage": [
+    {
+      "id": "6bb87bb285be4f97ada070735bd47ce3",
+      "job_id": "cf0864d8821245918033b32807552007",
+      "input_tokens": 2871,
+      "output_tokens": 71,
+      "estimated": 0,
+      "created": 1791516900.535501
+    }
+  ],
+  "tools": 0,
+  "actions": 0,
+  "outbox": 0,
+  "saved_messages": [
+    {
+      "id": "84c24f16fca343b1aece0a1e8ee7765b",
+      "role": "user",
+      "job_id": "cf0864d8821245918033b32807552007",
+      "references_json": "[{\"id\":\"e1e1e6e52b854d4e899429f7b7214e13\",\"kind\":\"feed\",\"title\":\"Oracle 用 ChatGPT 与 Codex 压缩工作耗时\",\"body\":\"OpenAI 官方动态介绍 Oracle 在招聘、工程与运营环节使用 ChatGPT Work 和 Codex，把原本需要数天的工作压缩到数分钟，思路是把专家知识转化为可快速重复执行的工作流。\\n\\n这条信息与 LLM 在真实企业流程中落地的方向相关，重点不在模型能力本身，而在于把专家经验固化成流程。订阅正文只给出结论性描述，没有披露具体工作流细节与使用规模，因此只能确认其用途与效果概述。\",\"source_ids\":[\"rss-e97d2cf953a663e171e6d652\"],\"source_url\":\"https://openai.com/index/oracle\"}]"
+    },
+    {
+      "id": "020bc535cd1741d1b5388fa13fb9be1f",
+      "role": "assistant",
+      "job_id": "cf0864d8821245918033b32807552007",
+      "references_json": "[]"
+    }
+  ],
+  "status": "passed"
+}

@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "schema": 4,
+  "backups": [
+    "navi.before-muse-revision-v4.sqlite3",
+    "navi.before-muse-revision-v3.sqlite3"
+  ],
+  "personal_goals_memories_artifacts_unchanged": true,
+  "personal_tasks_schedules_unchanged": true,
+  "daily_tokens": 300000,
+  "daily_requests": 300,
+  "checked_at": "2026-10-07T06:23:13.713406+00:00",
+  "additional_personal_records": 1,
+  "additional_records_from_isolated_harness": false,
+  "comparison_scope": "existing records in the pre-v4 migration backup; later application additions retained"
+}

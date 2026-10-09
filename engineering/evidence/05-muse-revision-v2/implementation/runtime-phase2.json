@@ -1,0 +1,8 @@
+{
+  "evidence_type": "personal-runtime",
+  "instance": "1c4d492baaef95cd6d58d9257bcc053a",
+  "pid": 8073,
+  "process": "1 ??       /Library/Frameworks/Python.framework/Versions/3.12/Resources/Python.app/Contents/MacOS/Python -m navi.server",
+  "schema": 5,
+  "original_goals_present": true
+}

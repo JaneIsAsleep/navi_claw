@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+NAVI_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+cd "$NAVI_ROOT"
+if ! command -v uv >/dev/null 2>&1; then
+  printf "%s\n" "需要 uv。安装说明：https://docs.astral.sh/uv/getting-started/installation/"
+  exit 1
+fi
+uv sync --locked --python 3.12
+if ! command -v npm >/dev/null 2>&1; then
+  printf "%s\n" "需要 Node.js 22.12 或更高版本：https://nodejs.org/en/download"
+  exit 1
+fi
+cd "$NAVI_ROOT/frontend"
+npm ci
+npm run build
+printf "%s\n" "准备完成。执行 ./start.command 启动 Navi，macOS 也可双击 start.command。"

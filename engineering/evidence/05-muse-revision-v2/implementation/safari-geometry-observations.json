@@ -1,0 +1,195 @@
+{
+  "evidence_type": "isolated-native-safari-ui",
+  "observations": [
+    {
+      "label": "desktop-20-1",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-20-2",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-20-3",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-1-1",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-1-2",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-1-3",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-0-1",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-0-2",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-0-3",
+      "query": false,
+      "loadedOptions": 0,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-no-match-1",
+      "query": true,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-no-match-2",
+      "query": true,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-no-match-3",
+      "query": true,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "desktop-error-1",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": true
+    },
+    {
+      "label": "desktop-error-2",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": true
+    },
+    {
+      "label": "desktop-error-3",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": true
+    },
+    {
+      "label": "narrow-error-1",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": true
+    },
+    {
+      "label": "narrow-error-2",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": true
+    },
+    {
+      "label": "narrow-error-3",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": true
+    },
+    {
+      "label": "narrow-no-match-1",
+      "query": true,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-no-match-2",
+      "query": true,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-no-match-3",
+      "query": true,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-0-1",
+      "query": false,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-0-2",
+      "query": false,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-0-3",
+      "query": false,
+      "visibleEmpty": true,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-1-1",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-1-2",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-1-3",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-20-1",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-20-2",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": false
+    },
+    {
+      "label": "narrow-20-3",
+      "query": false,
+      "visibleEmpty": false,
+      "visibleError": false
+    }
+  ],
+  "narrow_method": "temporary local-page zoom to 512x300 CSS pixels, reset after checks"
+}

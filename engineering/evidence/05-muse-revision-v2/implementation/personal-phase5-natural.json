@@ -1,0 +1,161 @@
+{
+  "evidence_type": "personal-natural-auto-content",
+  "checked_at": "2026-10-09T09:16:29.634544+08:00",
+  "jobs": [
+    {
+      "id": "1d04621e6b9a453693ea609b1b681bf4",
+      "kind": "feed",
+      "trigger_key": "daily:feed:2026-10-09",
+      "status": "succeeded",
+      "created_local": "2026-10-09T06:07:46.829941+08:00",
+      "finished_local": "2026-10-09T08:35:02.967920+08:00",
+      "attempt": 1,
+      "recovery_count": 0,
+      "receipt": [
+        {
+          "id": "553e079185ce4484b53b86190a102f72",
+          "job_id": "1d04621e6b9a453693ea609b1b681bf4",
+          "input_tokens": 4767,
+          "output_tokens": 906,
+          "estimated": 0,
+          "created": 1791506097.5846982
+        }
+      ]
+    },
+    {
+      "id": "76c2502ec90043868773cbfe330c3eec",
+      "kind": "ideas",
+      "trigger_key": "daily:ideas:2026-10-09",
+      "status": "succeeded",
+      "created_local": "2026-10-09T06:07:46.829941+08:00",
+      "finished_local": "2026-10-09T08:35:11.419731+08:00",
+      "attempt": 1,
+      "recovery_count": 0,
+      "receipt": [
+        {
+          "id": "4bab51b10cce4259865770524373252f",
+          "job_id": "76c2502ec90043868773cbfe330c3eec",
+          "input_tokens": 3543,
+          "output_tokens": 1111,
+          "estimated": 0,
+          "created": 1791506104.411131
+        }
+      ]
+    }
+  ],
+  "feeds": [
+    {
+      "id": "bb525125a8104dc4b676787e5deeca9b",
+      "title": "Python 3.15.0 最终版推迟到 10 月 9 日",
+      "body": "Python 官方博客发布 3.15.0rc3，这是计划中的最后一个候选版本。因出现与延迟导入相关的发布阻塞问题，原定本周的 3.15.0 正式版推迟到 2026 年 10 月 9 日，rc3 相比 rc2 包含约 156 项修复、构建改进与文档变更，来自 82 位贡献者。\n\n进入候选阶段后，只接受明确的缺陷修复，该系列此后不再有 ABI 变更。官方建议第三方项目维护者在这一阶段完成对 3.15 的适配，并在 PyPI 上发布对应 wheels，以便正式版发布时可以直接测试。rc 版本仍不建议用于生产环境。",
+      "characters": 256,
+      "paragraphs": 2,
+      "images": [
+        {
+          "asset_id": "4d7612e64e49c21e416b3a371da9351e3742679184eb9873c43ce8b728b8ae23",
+          "source_url": "https://blog.python.org/og/python-3150-rc3.png",
+          "alt": "Python 3.15.0 candidate 3 is here!"
+        }
+      ],
+      "sources": [
+        {
+          "id": "rss-41a2b0d6cc9df4f6a98194f9",
+          "title": "Python 官方博客",
+          "url": "https://blog.python.org/2026/10/python-3150-rc3/",
+          "published_at": "2026-10-02T00:00:00+00:00",
+          "source_time": 1790899200.0,
+          "read_scope": "article",
+          "read_at": 1791506097.543253
+        }
+      ],
+      "supporting_material_characters": 2000
+    },
+    {
+      "id": "d602b793eaf64ecbb9c20c012a058c74",
+      "title": "Python 多个版本集中发布，3.10 结束生命周期",
+      "body": "Python 一次性发布 3.10.22、3.11.17、3.12.15、3.13.16 和 3.14.8 五个版本，以安全修复为主。其中 3.10.22 是 3.10 系列的最后一次发布，该系列已满五年并正式停止维护，之后不再获得安全更新。\n\n3.11 进入仅安全修复模式直至 2027 年 10 月，3.12 的安全支持延续到 2028 年 10 月。3.13.16 是 3.13 最后一次完整维护版本，此后只做安全修复，3.14.8 为常规维护版本，后两者提供二进制安装包。使用 3.10 的项目需要安排升级。",
+      "characters": 258,
+      "paragraphs": 2,
+      "images": [
+        {
+          "asset_id": "f4ec1b628757da42d1b196097922d9fd858192f8200ae161a31e6fe91cd2a0c5",
+          "source_url": "https://blog.python.org/og/python-31022-31117.png",
+          "alt": "Python 3.10.22, 3.11.17, 3.12.15, 3.13.16 and 3.14.8 are now available!"
+        }
+      ],
+      "sources": [
+        {
+          "id": "rss-14da1c0148150a5a0084f797",
+          "title": "Python 官方博客",
+          "url": "https://blog.python.org/2026/10/python-31022-31117/",
+          "published_at": "2026-10-01T00:00:00+00:00",
+          "source_time": 1790812800.0,
+          "read_scope": "article",
+          "read_at": 1791506097.351114
+        }
+      ],
+      "supporting_material_characters": 2000
+    },
+    {
+      "id": "e1e1e6e52b854d4e899429f7b7214e13",
+      "title": "Oracle 用 ChatGPT 与 Codex 压缩工作耗时",
+      "body": "OpenAI 官方动态介绍 Oracle 在招聘、工程与运营环节使用 ChatGPT Work 和 Codex，把原本需要数天的工作压缩到数分钟，思路是把专家知识转化为可快速重复执行的工作流。\n\n这条信息与 LLM 在真实企业流程中落地的方向相关，重点不在模型能力本身，而在于把专家经验固化成流程。订阅正文只给出结论性描述，没有披露具体工作流细节与使用规模，因此只能确认其用途与效果概述。",
+      "characters": 194,
+      "paragraphs": 2,
+      "images": [],
+      "sources": [
+        {
+          "id": "rss-e97d2cf953a663e171e6d652",
+          "title": "OpenAI 官方动态",
+          "url": "https://openai.com/index/oracle",
+          "published_at": "2026-10-08T16:00:00+00:00",
+          "source_time": 1791475200.0,
+          "read_scope": "rss",
+          "read_at": 1791506084.680821
+        }
+      ],
+      "supporting_material_characters": 142
+    },
+    {
+      "id": "17d88fc715f24cfc9eca6ab945a34d72",
+      "title": "LegalOn 把 Codex 日均成本降低约 65%",
+      "body": "OpenAI 官方动态称 LegalOn 在保持开发速度的前提下，削减了约 65% 的 Codex 预估日均成本。做法是按任务类型把 Astra、Sol 和 Luna 三个模型分别匹配到合适场景，并对预算进行策略性管理。\n\n这说明 LLM 编码工具的实践重点正从“用不用”转向“如何按任务分配模型以控制成本”。订阅正文只提供了比例和原则，没有给出具体成本数字与任务划分规则，因此无法进一步还原其配置方式。",
+      "characters": 202,
+      "paragraphs": 2,
+      "images": [],
+      "sources": [
+        {
+          "id": "rss-1377b0f945b4769423722771",
+          "title": "OpenAI 官方动态",
+          "url": "https://openai.com/index/legalon-halves-codex-costs",
+          "published_at": "2026-10-08T12:00:00+00:00",
+          "source_time": 1791460800.0,
+          "read_scope": "rss",
+          "read_at": 1791506084.680821
+        }
+      ],
+      "supporting_material_characters": 159
+    },
+    {
+      "id": "3b9693b455fb49279e158cf29be87398",
+      "title": "Pollo AI 用多款模型生成图像与视频广告",
+      "body": "OpenAI 官方动态介绍 Pollo AI 使用 GPT-5.6、GPT-6 Astra 与 GPT-Image-2.5，帮助创作者把创意想法转化为细节图像和电影感的视频广告。\n\n这条内容体现的是 LLM 及图像模型在营销素材生产中的应用组合，多模型分工覆盖文本与图像环节。订阅正文只有一句概述，未说明各模型的具体职责划分、生成质量或成本情况，因此只能确认其产品定位与所用模型名称。",
+      "characters": 192,
+      "paragraphs": 2,
+      "images": [],
+      "sources": [
+        {
+          "id": "rss-3d8f3929910a56024a60060f",
+          "title": "OpenAI 官方动态",
+          "url": "https://openai.com/index/pollo-ai",
+          "published_at": "2026-10-08T12:00:00+00:00",
+          "source_time": 1791460800.0,
+          "read_scope": "rss",
+          "read_at": 1791506084.680821
+        }
+      ],
+      "supporting_material_characters": 131
+    }
+  ],
+  "timing_note": "确认自然跨日自动生成和真实用量；实际排入时间按记录列出。无法仅据此证明电脑在 06:00 持续清醒或真实休眠恢复。"
+}

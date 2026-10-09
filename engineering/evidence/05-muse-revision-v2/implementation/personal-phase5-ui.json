@@ -1,0 +1,46 @@
+{
+  "evidence_type": "personal-live-ui",
+  "status": "passed",
+  "viewport": [
+    1280,
+    802
+  ],
+  "feed": {
+    "count": 8,
+    "focus": "查看配图 Python 多个版本集中发布，3.10 结束生命周期",
+    "images": [
+      {
+        "asset": "/api/feed-media/f4ec1b628757da42d1b196097922d9fd858192f8200ae161a31e6fe91cd2a0c5",
+        "height": 630,
+        "loaded": true,
+        "width": 1200
+      },
+      {
+        "asset": "/api/feed-media/4d7612e64e49c21e416b3a371da9351e3742679184eb9873c43ce8b728b8ae23",
+        "height": 630,
+        "loaded": true,
+        "width": 1200
+      }
+    ],
+    "overflow": false,
+    "url": "#feed",
+    "main_inert_attribute": null,
+    "viewport": [
+      1280,
+      802
+    ]
+  },
+  "imageDialog": {
+    "dialog": "文章配图",
+    "dialogOutsideMain": true,
+    "image": [
+      {
+        "complete": true,
+        "height": 630,
+        "src": "/api/feed-media/f4ec1b628757da42d1b196097922d9fd858192f8200ae161a31e6fe91cd2a0c5",
+        "width": 1200
+      }
+    ],
+    "main_inert_attribute": ""
+  }
+}

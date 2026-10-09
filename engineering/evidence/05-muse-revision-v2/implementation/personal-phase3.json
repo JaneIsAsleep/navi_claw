@@ -1,0 +1,41 @@
+{
+  "evidence_type": "personal-read-only-search",
+  "before_usage": {
+    "requests": 144,
+    "input_tokens": 242178,
+    "output_tokens": 27488,
+    "estimated": 4,
+    "cost_configured": false,
+    "estimated_cost": 0.0,
+    "currency": "USD"
+  },
+  "before_jobs": 36,
+  "results": [
+    {
+      "id": "a7dfee140afd433195cfb7a66daa2da3",
+      "title": "[个人聊天文本已移除；原始证据保存在本机]",
+      "display_abstract": "[个人聊天文本已移除；原始证据保存在本机]",
+      "kind": "secondary",
+      "state": "active",
+      "title_manual": 0,
+      "goal_setup_json": "{\"category\":\"interests\",\"step\":2,\"user_rounds\":1,\"version\":4,\"status\":\"closed\",\"draft\":{\"title\":\"V2临时阅读验收\",\"abstract\":\"整理中性阅读笔记，每天读公开资料十分钟。\",\"body\":\"围绕公开资料做中性阅读笔记，每天十分钟，不设提醒。\",\"next_step\":\"先选一篇公开文章。\"},\"active_card_id\":null,\"receipts\":{\"62fbbaa428d54911a83f7d177e9ec070\":{\"choice_id\":\"f1f55e01290641eeb2b9679011b809ba\",\"response\":{\"status\":\"saved\",\"goal\":{\"id\":\"76121cc84f66442393b4f385d3b4f625\",\"kind\":\"goal\",\"payload\":{\"title\":\"V2临时阅读验收\",\"abstract\":\"整理中性阅读笔记，每天读公开资料十分钟。\",\"body\":\"围绕公开资料做中性阅读笔记，每天十分钟，不设提醒。\",\"next_step\":\"先选一篇公开文章。\",\"state\":\"active\",\"session_id\":\"a7dfee140afd433195cfb7a66daa2da3\",\"source_job_id\":\"62cb6e7354c742e1b5d951c008957ff7\"}},\"job_id\":\"62cb6e7354c742e1b5d951c008957ff7\",\"session_id\":\"a7dfee140afd433195cfb7a66daa2da3\"}}},\"saved_goal_id\":\"76121cc84f66442393b4f385d3b4f625\"}",
+      "created": 1791453488.099616,
+      "updated": 1791453565.142935,
+      "match_kind": "message",
+      "match_message_id": "fed939c3f7a541479a92b622156a7e20",
+      "match_excerpt": "[个人聊天文本已移除；原始证据保存在本机]"
+    }
+  ],
+  "after_usage": {
+    "requests": 144,
+    "input_tokens": 242178,
+    "output_tokens": 27488,
+    "estimated": 4,
+    "cost_configured": false,
+    "estimated_cost": 0.0,
+    "currency": "USD"
+  },
+  "after_jobs": 36,
+  "zero_model": true,
+  "hit_highlight_browser": true
+}

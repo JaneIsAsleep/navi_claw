@@ -1,0 +1,29 @@
+{
+  "evidence_type": "personal-before-final-runtime",
+  "counts": {
+    "sessions": 9,
+    "messages": 42,
+    "jobs": 38,
+    "usage": 714,
+    "records": 57
+  },
+  "daily_jobs": [
+    {
+      "id": "1d04621e6b9a453693ea609b1b681bf4",
+      "kind": "feed",
+      "status": "succeeded",
+      "attempt": 1,
+      "recovery_count": 0,
+      "trigger_key": "daily:feed:2026-10-09"
+    },
+    {
+      "id": "76c2502ec90043868773cbfe330c3eec",
+      "kind": "ideas",
+      "status": "succeeded",
+      "attempt": 1,
+      "recovery_count": 0,
+      "trigger_key": "daily:ideas:2026-10-09"
+    }
+  ],
+  "log_sha256": "89d261c525a5253c036111b7dd6831ecc10f23d8b880429486ccc1379a3e4772"
+}

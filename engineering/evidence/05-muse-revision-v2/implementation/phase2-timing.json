@@ -1,0 +1,35 @@
+{
+  "evidence_type": "isolated-offline-browser",
+  "desktopToggle": [
+    {
+      "cycle": 1,
+      "draft": "保留这段验收草稿"
+    },
+    {
+      "cycle": 2,
+      "draft": "保留这段验收草稿"
+    },
+    {
+      "cycle": 3,
+      "draft": "保留这段验收草稿"
+    }
+  ],
+  "completion": [
+    {
+      "elapsed": 619,
+      "checked": true,
+      "disabled": true,
+      "present": true
+    },
+    {
+      "elapsed": 2502,
+      "checked": true,
+      "present": true
+    },
+    {
+      "elapsed": 3502,
+      "present": false
+    }
+  ],
+  "failedCompletionRestoresUnchecked": true
+}

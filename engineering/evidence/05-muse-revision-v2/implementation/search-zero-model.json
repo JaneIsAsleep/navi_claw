@@ -1,0 +1,11 @@
+{
+  "evidence_type": "isolated-offline-api-and-browser",
+  "after_open_archived_body_hit": {
+    "sessions": 20,
+    "messages": 760,
+    "jobs": 0,
+    "records": 4,
+    "usage": 0
+  },
+  "archived_remains_archived": true
+}

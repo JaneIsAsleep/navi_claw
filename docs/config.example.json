@@ -1,0 +1,17 @@
+{
+  "model": "deepseek-flash",
+  "protocol": "messages",
+  "workflow": "priority_briefing",
+  "notification_policy": "daily",
+  "timezone": "Asia/Taipei",
+  "request_timeout": 60,
+  "job_timeout": 180,
+  "max_model_calls": 5,
+  "max_tool_calls": 10,
+  "max_output_tokens": 4096,
+  "daily_requests": 0,
+  "daily_tokens": 0,
+  "input_price_per_million": 0,
+  "output_price_per_million": 0,
+  "price_currency": "USD"
+}

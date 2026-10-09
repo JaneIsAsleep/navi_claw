@@ -1,0 +1,154 @@
+{
+  "evidence_type": "synthetic-full-asgi-api",
+  "machine": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.7",
+  "sessions": 2000,
+  "messages": 100000,
+  "characters_per_message": 600,
+  "p95_ms": 301.64733302081004,
+  "median_ms": 34.31710400036536,
+  "samples": [
+    {
+      "query": "RareNeedle",
+      "ms": 311.944457993377,
+      "results": 20
+    },
+    {
+      "query": "NoSuchTerm",
+      "ms": 271.6468750149943,
+      "results": 0
+    },
+    {
+      "query": "公",
+      "ms": 32.41204202640802,
+      "results": 20
+    },
+    {
+      "query": "资料",
+      "ms": 29.476207972038537,
+      "results": 20
+    },
+    {
+      "query": "python",
+      "ms": 29.59787502186373,
+      "results": 20
+    },
+    {
+      "query": "%_ 'quote'",
+      "ms": 282.9762080218643,
+      "results": 0
+    },
+    {
+      "query": "话题",
+      "ms": 4.725250008050352,
+      "results": 20
+    },
+    {
+      "query": "RareNeedle",
+      "ms": 294.32508401805535,
+      "results": 20
+    },
+    {
+      "query": "NoSuchTerm",
+      "ms": 264.0485840383917,
+      "results": 0
+    },
+    {
+      "query": "公",
+      "ms": 31.95249999407679,
+      "results": 20
+    },
+    {
+      "query": "资料",
+      "ms": 31.12316702026874,
+      "results": 20
+    },
+    {
+      "query": "python",
+      "ms": 30.282749969046563,
+      "results": 20
+    },
+    {
+      "query": "%_ 'quote'",
+      "ms": 273.7090840237215,
+      "results": 0
+    },
+    {
+      "query": "话题",
+      "ms": 4.8795840120874345,
+      "results": 20
+    },
+    {
+      "query": "RareNeedle",
+      "ms": 301.64733302081004,
+      "results": 20
+    },
+    {
+      "query": "NoSuchTerm",
+      "ms": 272.40266697481275,
+      "results": 0
+    },
+    {
+      "query": "公",
+      "ms": 36.22216597432271,
+      "results": 20
+    },
+    {
+      "query": "资料",
+      "ms": 28.942791977897286,
+      "results": 20
+    },
+    {
+      "query": "python",
+      "ms": 26.978791982401162,
+      "results": 20
+    },
+    {
+      "query": "%_ 'quote'",
+      "ms": 270.8018749835901,
+      "results": 0
+    },
+    {
+      "query": "话题",
+      "ms": 3.633290994912386,
+      "results": 20
+    },
+    {
+      "query": "RareNeedle",
+      "ms": 289.8258750210516,
+      "results": 20
+    },
+    {
+      "query": "NoSuchTerm",
+      "ms": 259.5616250182502,
+      "results": 0
+    },
+    {
+      "query": "公",
+      "ms": 42.24541696021333,
+      "results": 20
+    },
+    {
+      "query": "资料",
+      "ms": 26.89024998107925,
+      "results": 20
+    },
+    {
+      "query": "python",
+      "ms": 28.60970899928361,
+      "results": 20
+    },
+    {
+      "query": "%_ 'quote'",
+      "ms": 270.12275002198294,
+      "results": 0
+    },
+    {
+      "query": "话题",
+      "ms": 4.888541996479034,
+      "results": 20
+    }
+  ],
+  "usage_count": 0,
+  "status": "passed"
+}

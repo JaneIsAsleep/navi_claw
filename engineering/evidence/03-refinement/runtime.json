@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-10-03T10:33:07.099768+00:00",
+  "evidence_type": "actual-local-runtime-isolated-data",
+  "checks": [
+    "重复启动复用同一进程，status 正确；启动器退出后 PID 1 托管且无终端",
+    "实际停止后入口断开；新进程恢复相同消息、条目、调度、动作和配置",
+    "CLI 与 Web 使用同一 Gateway 和会话集合",
+    "CLI 重命名、封存、标题找回、解封及永久删除实际生效，删除只取消关联测试提醒",
+    "实际关闭验收浏览器后服务可访问，后台空检查自动完成且静默，零模型调用及投递"
+  ],
+  "status": "passed",
+  "browser_close": "passed",
+  "native_terminal_window_close": "not directly exercised; detached process verified",
+  "daily_service_restored": true,
+  "restored_at": "2026-10-03T10:40:49.620418+00:00",
+  "daily_web_main_visible": true
+}

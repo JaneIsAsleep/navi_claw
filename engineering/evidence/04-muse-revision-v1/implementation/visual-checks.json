@@ -1,0 +1,32 @@
+{
+  "evidence_type": "actual-browser-with-isolated-ui-fixtures",
+  "desktop": {
+    "avatarOffset": 0.5,
+    "chatRatio": 0.3999948089700997,
+    "chatWidth": 481.59375,
+    "height": 802,
+    "overflow": false,
+    "width": 1280
+  },
+  "mobileSearch": {
+    "dialogWidth": 288,
+    "height": 812,
+    "overflow": false,
+    "width": 320
+  },
+  "zoom": {
+    "browser": "Chrome",
+    "percent": 200,
+    "verifiedBy": "native menu displayed 缩放比例：200%",
+    "restored": 100
+  },
+  "checked": [
+    "900px 狭屏切换",
+    "375×812 草稿刷新恢复",
+    "320px 搜索与聊天",
+    "搜索关闭保留成果详情及焦点",
+    "完成后追踪消失，恢复不复活提醒",
+    "草稿真实下载到本机"
+  ],
+  "cardOrigin": "ui-replay.json"
+}

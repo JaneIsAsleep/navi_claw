@@ -1,0 +1,25 @@
+{
+  "timestamp": "2026-10-02T01:34:16.662969+00:00",
+  "evidence_type": "actual-local-runtime",
+  "checks": [
+    "重复启动复用同一个 PID",
+    "启动父进程退出后 Gateway 由 PID 1 托管且没有终端",
+    "停止后 HTTP 入口断开",
+    "新进程启动后会话、调度、作业、审批、投递和个人条目 ID 保留",
+    "重启后原始消息、个人条目内容、作业结果、工具调用、审批及投递记录逐项一致",
+    "配置和密钥已配置状态保留；未输出或复制密钥",
+    "实际 CLI 与 Web 查看相同会话 ID",
+    "CLI 恢复、暂停、编辑调度后 Web 状态一致",
+    "用户实际关闭 start.command 的原生终端窗口后，确认网页仍正常"
+  ],
+  "counts_after_restart": {
+    "sessions": 2,
+    "schedules": 1,
+    "jobs": 3,
+    "actions": 2,
+    "notifications": 0,
+    "records": 9
+  },
+  "status": "passed",
+  "native_terminal_window_close": "passed, directly confirmed by user"
+}
