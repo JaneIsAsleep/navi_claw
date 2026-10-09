@@ -6,7 +6,7 @@
 
 ## 开始使用
 
-当前机器已准备依赖和前端。双击 `start.command`，就绪后自动打开 [Navi](http://127.0.0.1:8766)。重复启动复用已有后台。
+新机器先按下文执行 `./setup` 准备依赖和前端。macOS 双击 `start.command`，Windows/WSL2 在 Ubuntu 终端执行 `./start.command`，就绪后打开 [Navi](http://127.0.0.1:8766)。重复启动复用已有后台。
 
 启动完成后，启动终端窗口可以关闭。关闭浏览器也不会停止任务。真正停止请双击 `stop.command`；查看状态、入口和日志请双击 `status.command`。
 
@@ -92,6 +92,6 @@ cd navi_claw
 
 2026-10-07 的 `./test --live` 与 `./test --live --refinement` 均使用真实 DeepSeek 通过，覆盖基础八组、原有细化七组及 Muse 新增五组闭环，见 [真实验收汇总](engineering/evidence/04-muse-revision-v1/implementation/live-completion.json) 和 [Muse 修改实施记录](engineering/evidence/04-muse-revision-v1/implementation/ACCEPTANCE.md)。测试使用隔离数据，模型请求计入现有预算。[2026-10-04 的此前模型闭环证据](engineering/evidence/04-muse-revision-v1/implementation/refinement-before-revision.json) 继续保留。一周真实使用仍待完成，记录见 [试用表](engineering/evidence/03-refinement/WEEK_TRIAL.md)。
 
-当前 v2 的五阶段实现及 2026-10-09 验证以 [v2 实施验收](engineering/evidence/05-muse-revision-v2/implementation/ACCEPTANCE.md) 为准。已观察次日实际自动生成，持续清醒的准点 06:00、设备真实休眠恢复及一周试用仍待自然观察。开发日志等待用户审核批准后维护。
+当前 v2 的五阶段实现及 2026-10-09 验证以 [v2 实施验收](engineering/evidence/05-muse-revision-v2/implementation/ACCEPTANCE.md) 为准。已观察次日实际自动生成，持续清醒的准点 06:00、设备真实休眠恢复及一周试用仍待自然观察。实施经过见 [开发日志](engineering/logs/DEVELOPMENT_LOG.md)。
 
 版本覆盖原始 Basic 70 与 Advanced 30 的全部工程项目。具体评分由课程评审决定，日常自动提醒与原始逐条审批要求的差异已单独说明。
