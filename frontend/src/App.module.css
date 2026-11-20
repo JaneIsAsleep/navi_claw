@@ -238,6 +238,9 @@
 .goalCompleted .goalAbstract { color: var(--muted); text-decoration: line-through; }
 .goalMore { margin-left: auto; position: relative; }
 .goalPanelControl { display: flex; align-items: center; justify-content: flex-end; padding: 8px 24px; gap: 12px; }
+@media (min-width: 801px) {
+  .goalTopbar { display: none; }
+}
 .goalRow { display: flex; align-items: center; gap: 14px; padding: 9px 0; min-height: 52px; }
 .goalRow input { width: 22px; height: 22px; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 .modal .goalRow { flex-direction: row; margin: 12px 0; }

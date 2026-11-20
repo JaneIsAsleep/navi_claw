@@ -325,3 +325,80 @@ def test_single_heartbeat_and_invalid_record_payloads_are_rejected(g):
     with TestClient(create_app(g)) as web:
         assert web.post("/api/chat", json=[]).status_code == 400
         assert web.post("/api/chat", content="{", headers={"Content-Type": "application/json"}).status_code == 400
+
+
+async def test_reminder_retries_same_occurrence_after_sleep_crosses_deadline(g):
+    class SleepyModel(Model):
+        async def chat(self, **request):
+            if not self.calls:
+                self.calls.append(request)
+                g.clock.now += 5400
+                raise AgentError('DeepSeek 请求超时', True, 'model_timeout')
+            return Reply([{'type': 'text', 'text': '今天想聊什么？'}])
+
+    g.model = SleepyModel()
+    task = g.schedule({'title': '早间聊天', 'instruction': '找我聊天', 'kind': 'recurring',
+                       'interval_seconds': 86400, 'next_due': g.clock()})
+    g.tick()
+    await g.run_one()
+    job = g.db.one('SELECT * FROM jobs WHERE task_id=?', (task['task_id'],))
+    assert job['status'] == 'pending' and job['deadline'] is None
+    g.clock.now = job['next_run']
+    g.tick()
+    await g.run_one()
+    g.deliver()
+    assert g.require('jobs', job['id'])['attempt'] == 2
+    assert [r['body'] for r in g.snapshot()['notifications']] == ['今天想聊什么？']
+
+
+@pytest.mark.parametrize('policy', ['daily', 'strict'])
+async def test_reminder_still_notifies_when_generation_fails(g, policy):
+    class Unavailable:
+        async def chat(self, **request):
+            raise AgentError('DeepSeek 请求超时', True, 'model_timeout')
+
+    g.model = Unavailable()
+    g.settings.update({'notification_policy': policy})
+    create_due(g, 'once')
+    g.tick()
+    for _ in range(3):
+        await g.run_one()
+        g.clock.now += 2
+    action, = g.snapshot()['actions']
+    assert g.require('jobs', action['job_id'])['status'] == 'failed'
+    assert '未能生成' in action['body']
+    g.deliver()
+    if policy == 'strict':
+        assert not g.snapshot()['notifications'] and action['status'] == 'pending'
+        g.decide(action['id'], 'approve', action['content_hash'])
+    g.deliver()
+    assert len(g.snapshot()['notifications']) == 1
+
+
+@pytest.mark.parametrize('existing', ['undelivered', 'already_delivered', 'paused', 'exhausted'])
+async def test_restart_recovers_only_outstanding_interrupted_reminder(g, existing):
+    task = g.schedule({'title': '晨间聊天', 'instruction': '聊几句', 'kind': 'recurring',
+                       'interval_seconds': 86400, 'next_due': g.clock()})
+    g.tick()
+    job = g.db.one('SELECT id FROM jobs WHERE task_id=?', (task['task_id'],))
+    g.clock.now += 5400
+    g.db.execute("UPDATE jobs SET status='failed', attempt=?, deadline=?, updated=?, error_code='model_timeout' WHERE id=?",
+                 (3 if existing == 'exhausted' else 1, g.clock.now-5000, g.clock.now, job['id']))
+    if existing == 'already_delivered':
+        g.propose(job['id'], 'notification', '晨间聊天', 'inbox', '已经送达')
+        g.deliver()
+    if existing == 'paused':
+        g.edit_schedule(task['id'], {'operation': 'pause'})
+    restored = Gateway(ROOT, g.directory, Model(), g.clock)
+    restored.recover()
+    restored.recover()
+    row = restored.require('jobs', job['id'])
+    if existing != 'undelivered':
+        assert row['status'] == 'failed'
+        return
+    assert row['status'] == 'pending'
+    g.clock.now = row['next_run']
+    await restored.run_one()
+    restored.deliver()
+    assert restored.require('jobs', job['id'])['attempt'] == 2
+    assert len(restored.snapshot()['notifications']) == 1

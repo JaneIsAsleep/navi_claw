@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import tempfile
+from zoneinfo import ZoneInfo
 
 from navi.gateway import Gateway
 from .live import LiveGateway, ROOT, STATE_ROOT, wait, output_directory, summarize
@@ -86,7 +87,14 @@ async def main():
         report["checks"].append("直接请求 Navi 解封通过真实运行时工具完成，核对持久结果")
 
         g.settings.update({"notification_policy": "daily"})
-        normal = g.schedule({"title": "解封后的周期提醒", "instruction": "简短提醒我列出报告的三个论点。", "kind": "recurring", "interval_seconds": 3600, "next_due": g.clock(), "session_id": topic["id"], "goal_id": goal["id"]})
+        morning = g.chat("每天8:00主动来找我聊几句。问我一个关于读书的问题，不要使用固定的问候模板。", topic["id"])
+        jobs.append(morning["id"])
+        await wait(g, morning["id"])
+        normal, = [row for row in g.snapshot()["schedules"] if row["id"] != schedule["id"]]
+        local_due = datetime.fromtimestamp(normal['next_due'], ZoneInfo(g.settings.current()['timezone']))
+        assert local_due.strftime('%H:%M:%S') == '08:00:00' and 0 < normal['next_due'] - morning['created'] <= 86400
+        assert normal['kind'] == 'recurring' and normal['interval_seconds'] == 86400
+        g.edit_schedule(normal['id'], {'next_due': g.clock()})
         normal_job = await scheduled_job(g, normal)
         g.edit_schedule(normal["id"], {"operation": "pause"})
         jobs.append(normal_job["id"])

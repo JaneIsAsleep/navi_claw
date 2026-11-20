@@ -54,7 +54,7 @@ export default function App() {
   const completionTimers = useRef<Record<string, number>>({})
   const goalStarting = useRef(false)
   const [goalSession, setGoalSession] = useState(localStorage.getItem('navi-goal-session') || '')
-  const [goalChatVisible, setGoalChatVisible] = useState(localStorage.getItem('navi-goal-chat-visible') === 'true')
+  const [goalChatVisible, setGoalChatVisible] = useState(false)
   const [feedChatVisible, setFeedChatVisible] = useState(false)
   const [pairedView, setPairedView] = useState<'content' | 'chat'>('chat')
   const [expandedFrom, setExpandedFrom] = useState<'goal' | 'feed' | null>(null)
@@ -91,7 +91,6 @@ export default function App() {
   const goalPaired = page === 'goal' && goalChatVisible && goalSession === sessionId && Boolean(goalSession)
   const feedPaired = page === 'feed' && feedChatVisible && !detail
   const paired = goalPaired || feedPaired
-  const resumableGoal = state?.sessions.find(row => row.id === goalSession && JSON.parse(row.goal_setup_json || '{}').category) || state?.sessions.find(row => JSON.parse(row.goal_setup_json || '{}').category)
   const currentSession = state?.sessions.find(row => row.id === sessionId) || openedSession
   const archived = currentSession?.state === 'archived'
   const busy = state?.jobs.find(job => job.session_id === sessionId && !terminal(job.status) && ['chat', 'ideas', 'draft', 'compact', 'connection', 'goal_setup', 'goal_save'].includes(job.kind))
@@ -108,6 +107,7 @@ export default function App() {
   function rememberPosition() { positions.current[positionKey] = (page === 'chat' ? chatRef.current : page === 'feed' && !detail ? feedRef.current : contentRef.current)?.scrollTop || 0; if (paired) positions.current['chat-' + sessionId] = chatRef.current?.scrollTop || 0; localStorage.setItem('navi-reading-positions', JSON.stringify(positions.current)) }
   function navigate(next: Page) {
     if (next === 'search') { searchTrigger.current = interaction.current || document.activeElement as HTMLElement; setSearchOpen(true); return }
+    if (next === 'goal') setGoalChatVisible(false)
     rememberPosition(); setPageMenu(false); setPage(next); location.hash = next; setNavOpen(false); setSessionOpen(false); setDetail(null); setError(''); setNotice('')
   }
   function chooseSession(row: Session) {
@@ -149,10 +149,10 @@ export default function App() {
       }
     } catch { setConnected(false) }
   }
-  useEffect(() => { localStorage.setItem('navi-goal-chat-visible', String(goalChatVisible)) }, [goalChatVisible])
   useEffect(() => { if (feedReply) localStorage.setItem('navi-feed-reply', JSON.stringify(feedReply)); else localStorage.removeItem('navi-feed-reply') }, [feedReply])
   useEffect(() => {
     if (page !== 'goal') {
+      setGoalChatVisible(false)
       Object.values(completionTimers.current).forEach(clearTimeout)
       completionTimers.current = {}; setCompletedRows({})
     }
@@ -373,13 +373,6 @@ export default function App() {
     })
     goalStarting.current = false
   }
-  function toggleGoalChat() {
-    if (goalPaired) { setGoalChatVisible(false); return }
-    if (!resumableGoal) return
-    if (resumableGoal.id !== sessionId) chooseSession(resumableGoal)
-    setGoalSession(resumableGoal.id); localStorage.setItem('navi-goal-session', resumableGoal.id)
-    setGoalChatVisible(true); setPairedView('chat'); setPage('goal'); location.hash = 'goal'
-  }
   async function completeGoal(row: Item) {
     if (working || completedRows[row.id]) return
     await act(async () => {
@@ -402,7 +395,7 @@ export default function App() {
   const sessionActions = state?.actions.filter(row => row.source_session_id === sessionId) || []
 
   const contentHeader = <>
-          <div className={s.pageIntro}><div className={s.pageHeading}><h1>{title}</h1>{['feed','goal'].includes(page) && <div className={s.pageOptions}><button className={s.iconButton} aria-label={page === 'feed' ? '动态选项' : '目标选项'} aria-expanded={pageMenu} onClick={() => setPageMenu(!pageMenu)}><MoreHorizontal size={22} /></button>{pageMenu && <div className={s.optionsMenu}>{page === 'goal' ? <button onClick={() => { capture(); setPageMenu(false); setCompletedOpen(true) }}>查看已完成目标</button> : <><button onClick={() => { setPageMenu(false); edit('brief') }}>关注说明</button><button onClick={() => { capture(); setPageMenu(false); setSourcesOpen(true) }}>管理来源</button></>}</div>}</div>}</div><p>{({ search: '对话标题搜索，包含匹配的封存话题。', feed: '关注内容。按本地生成或收录顺序安静更新。', idea: '结合当时的目标与偏好，看看下一步。', goal: '方向、下一步和真实推进记录。', artifact: '查看和下载已经保存的成果。', settings: '连接模型，掌握授权和本机运行边界。' } as Record<string, string>)[page]}</p></div>
+          <div className={s.pageIntro}><div className={s.pageHeading}><h1>{title}</h1>{['feed','goal'].includes(page) && <div className={s.pageOptions}><button className={s.iconButton} aria-label={page === 'feed' ? '动态选项' : '目标选项'} aria-expanded={pageMenu} onClick={() => setPageMenu(!pageMenu)}><MoreHorizontal size={22} /></button>{pageMenu && <div className={s.optionsMenu}>{page === 'goal' ? <button onClick={() => { capture(); setPageMenu(false); setCompletedOpen(true) }}>查看已完成目标</button> : <><button onClick={() => { setPageMenu(false); edit('brief') }}>关注说明</button><button onClick={() => { capture(); setPageMenu(false); setSourcesOpen(true) }}>管理来源</button></>}</div>}</div>}</div><p>{({ search: '对话标题搜索，包含匹配的封存话题。', feed: '关注内容。按本地生成或收录顺序安静更新。', idea: '看看今天能帮你做点什么。这里的建议会参考你正在做的事和订阅的内容。', goal: '方向、下一步和真实推进记录。', artifact: '查看和下载已经保存的成果。', settings: '连接模型，掌握授权和本机运行边界。' } as Record<string, string>)[page]}</p></div>
           {['feed','idea'].includes(page) && <><p className={s.subtle}>每日 06:00 更新，需本机运行。休眠或停机时，清醒后补更新，只补最近一次。</p>{page === 'feed' && !state?.feed_brief && <p className={s.subtle}>请在动态选项中设置关注说明。</p>}{page === "feed" && state?.records.some(row => row.id.startsWith("source-") && row.payload.enabled !== false && row.payload.last_error) && <button className={s.textButton} onClick={() => { capture(); setSourcesOpen(true) }}>来源读取失败，查看来源状态</button>}{(() => { const content = state?.auto_content?.[page === 'feed' ? 'feed' : 'ideas']; const latest = content?.latest; return <>{content?.last_success && <p className={s.subtle}>最近成功更新 {time(content.last_success)}</p>}{latest?.error && <p role="status" className={s.failureText}>{latest.error} · {latest.status === 'pending' ? '下次重试 ' + time(latest.next_run) + '，需持续清醒' : latest.status === 'running' ? '正在重试' : '已停止重试，等待下次日更'}</p>}</> })()}</>}
   </>
   const chatPanel = <ChatPanel avatar={avatar()} controls={<><button className={s.mobileMenu + ' ' + s.iconButton} aria-label="打开导航" onClick={() => setNavOpen(true)}><Menu size={22} /></button>{!paired && <button className={s.mobileSessions + ' ' + s.iconButton} aria-label="打开会话列表" onClick={() => setSessionOpen(!sessionOpen)}><MessageCircle size={21} /></button>}</>} split={paired} returnLabel={expandedFrom === 'feed' ? '返回并排动态' : '返回并排目标'} toggle={paired || expandedFrom || goalSession === sessionId && goalSession ? toggleChatLayout : undefined}>
@@ -445,14 +438,17 @@ export default function App() {
       </div>)}</div>
       <button className={s.textButton} onClick={() => navigate('search')}><Search size={16} />搜索话题</button><p className={s.sessionFoot}>保存在你的本机</p>
     </aside>}
-    {paired && <div className={s.pairedChat + (pairedView === 'chat' ? ' ' + s.compactChatVisible : '')} inert={assistant || overlayOpen || navOpen || undefined}><button className={s.compactSwitch + ' ' + s.textButton} onClick={() => setPairedView('content')}>切换到{feedPaired ? '动态' : '目标'}</button>{chatPanel}</div>}
+    {paired && <div className={s.pairedChat + (pairedView === 'chat' ? ' ' + s.compactChatVisible : '')} inert={assistant || overlayOpen || navOpen || undefined}><button className={s.compactSwitch + ' ' + s.textButton} onClick={() => feedPaired ? setPairedView('content') : setGoalChatVisible(false)}>切换到{feedPaired ? '动态' : '目标'}</button>{chatPanel}</div>}
     <main id="main-content" tabIndex={-1} className={s.main + (paired ? ' ' + s.pairedGoals + (pairedView === 'chat' ? ' ' + s.compactGoalsHidden : '') : '')} inert={assistant || overlayOpen || navOpen || undefined}>
-{page !== 'chat' && <header className={s.pageTopbar + ' ' + s.goalPanelControl}><button className={s.mobileMenu + ' ' + s.iconButton} aria-label="打开导航" onClick={() => setNavOpen(true)}><Menu size={22} /></button>{['goal','feed'].includes(page) && <button className={s.iconButton} aria-label={paired ? '收起并排聊天' : '打开并排聊天'} aria-expanded={paired} disabled={page === 'goal' && !resumableGoal} title={page === 'goal' && !resumableGoal ? '先开始一个目标引导，再打开聊天' : undefined} onClick={page === 'feed' ? toggleFeedChat : toggleGoalChat}><MessageCircle size={20} /></button>}</header>}
+      {page !== 'chat' && <header className={s.pageTopbar + ' ' + s.goalPanelControl + (page === 'goal' ? ' ' + s.goalTopbar : '')}>
+        <button className={s.mobileMenu + ' ' + s.iconButton} aria-label="打开导航" onClick={() => setNavOpen(true)}><Menu size={22} /></button>
+        {page === 'feed' && <button className={s.iconButton} aria-label={feedPaired ? '收起并排聊天' : '打开并排聊天'} aria-expanded={feedPaired} onClick={toggleFeedChat}><MessageCircle size={20} /></button>}
+      </header>}
 
       {error && !modalOpen && !paired && <div role="alert" className={s.error}>{error}<button className={s.iconButton} aria-label="关闭错误提示" onClick={() => setError('')}><X size={16} /></button></div>}
       {notice && !paired && <div role="status" className={s.notice}>{notice}</div>}
       {!connected && <div role="status" className={s.connection}>正在连接本机服务。双击 start.command 可启动 Navi。</div>}
-      {paired && <button className={s.compactSwitch + ' ' + s.textButton} onClick={() => setPairedView('chat')}>切换到当前聊天</button>}
+      {feedPaired && <button className={s.compactSwitch + ' ' + s.textButton} onClick={() => setPairedView('chat')}>切换到当前聊天</button>}
       {page === 'chat' ? chatPanel : page === 'feed' && !detail ? null : <section ref={contentRef} className={s.pageContent} onScroll={rememberPosition}>
         {detail ? <><button className={s.textButton} onClick={() => setDetail(null)}><ChevronLeft size={17} />返回{title}</button><h1>{detail.payload.title}</h1><div className={s.meta}>{time(detail.created)} · {detail.kind === 'artifact' ? detail.payload.filename ? '已导出文件' : '草稿，可下载当前内容' : detail.kind === 'goal' ? labels[detail.payload.state || 'active'] : '已保存内容'}</div><Markdown>{detail.payload.body || ''}</Markdown>{detail.kind === "feed" && <div className={s.meta}>{detail.payload.sources?.map(source => <span key={source.id}>{source.url ? <a href={source.url} target="_blank" rel="noreferrer">{source.title}</a> : source.title}{source.source_time ? " · " + time(source.source_time) : source.published_at ? " · " + source.published_at : ""}</span>)}</div>}<div className={s.rowActions}>{detail.kind !== 'artifact' && <button className={s.secondary} onClick={() => discuss(detail)}>带引用讨论</button>}{detail.kind !== 'artifact' && (detail.source_session ? <button className={s.textButton} onClick={() => chooseSession(detail.source_session!)}>回原话题：{detail.source_session.title}</button> : <span className={s.subtle}>暂无关联对话，将开启带引用的新讨论。</span>)}{detail.kind === 'artifact' && <a className={s.primary} href={'/api/artifacts/' + detail.id + '/download'}><Download size={17} />下载{detail.payload.filename ? '文件' : '草稿'}</a>}</div>
           {detail.kind === 'goal' && <><h2>下一步</h2><p>{detail.payload.next_step || '待明确'}</p><div className={s.rowActions}><button className={s.secondary} onClick={() => edit('goal', detail)}>编辑目标</button><button className={s.textButton} onClick={() => actPath('/records/' + detail.id, 'PUT', { ...detail.payload, state: detail.payload.state === 'paused' ? 'active' : 'paused' }, '目标状态已更新，提醒排程保持原有安排。')}>{detail.payload.state === 'paused' ? '恢复' : '暂停'}</button><button className={s.textButton} onClick={() => actPath('/records/' + detail.id, 'PUT', { ...detail.payload, state: 'completed' }, '目标及关联追踪已结束。')}>完成目标</button></div><h2>实际关联任务</h2>{detail.schedules.map(row => <p key={row.id}>{row.title} · {labels[row.state]}</p>)}{!detail.schedules.length && <p className={s.subtle}>暂无关联任务。</p>}<h2>相关成果</h2>{detail.artifacts.map(row => <button className={s.textButton} key={row.id} onClick={() => void openRecord(row)}>{row.payload.title}</button>)}{!detail.artifacts.length && <p className={s.subtle}>暂无关联成果。</p>}<h2>活动时间轴</h2>{detail.timeline.filter(row => eventLabels[row.kind]).map(row => <p key={row.id}>{time(row.created)} · {eventLabels[row.kind]}{row.data.next_step ? '：' + String(row.data.next_step) : ''}</p>)}</>}

@@ -729,7 +729,8 @@ class Gateway:
             self._awake_since = now
             for identity, execution in tuple(self.active.items()):
                 row = self.require('jobs', identity)
-                if row['kind'] in {'feed', 'ideas'} and row['trigger_key'].startswith('daily:') and row['deadline'] and row['deadline'] <= now:
+                watches_sleep = row['kind'] in {'once', 'recurring'} or row['trigger_key'].startswith('daily:')
+                if watches_sleep and row['deadline'] and row['deadline'] <= now:
                     self._sleep_interrupted.add(identity)
                     execution.cancel()
         self._last_tick = now
@@ -988,14 +989,38 @@ class Gateway:
         await self.emit(job_id, "done", {"status": "cancelled"})
         return self.require("jobs", job_id)
 
+    def resume_interrupted_reminder(self, conn, job, now):
+        # Retry only the latest occurrence while it still has no action to replay.
+        if not conn.execute(
+            "SELECT 1 FROM jobs j JOIN tasks t ON j.task_id=t.id JOIN schedules s ON s.task_id=t.id "
+            "WHERE j.id=? AND j.kind IN ('once','recurring') AND j.attempt<3 AND t.state='active' "
+            "AND (s.kind='once' OR (s.enabled=1 AND s.next_due>?)) "
+            "AND NOT EXISTS (SELECT 1 FROM jobs newer WHERE newer.task_id=t.id AND newer.rowid>j.rowid) "
+            "AND NOT EXISTS (SELECT 1 FROM actions WHERE job_id=j.id)", (job['id'], now)
+        ).fetchone():
+            return False
+        conn.execute("UPDATE jobs SET status='pending',deadline=NULL,next_run=?,updated=?,error_code='sleep_interrupted' WHERE id=?",
+                     (now + 2, now, job['id']))
+        conn.execute("INSERT INTO audit(job_id,kind,data,created) VALUES(?,'reminder.recovery_queued','{}',?)", (job['id'], now))
+        return True
+
     def recover(self):
         now = self.clock()
         with self.db.transaction() as conn:
             for session in conn.execute("SELECT id FROM sessions WHERE state='deleting'").fetchall():
                 self.finish_session_deletion(conn, session["id"], now)
             conn.execute("UPDATE attempts SET status='interrupted',ended=?,error='Gateway 重新启动' WHERE status='running'", (now,))
+            # Older versions recorded a timeout across sleep as a terminal failure.
+            interrupted = conn.execute(
+                "SELECT id FROM jobs WHERE kind IN ('once','recurring') AND deadline<=? AND "
+                "(status='pending' OR (status='failed' AND error_code='model_timeout' AND updated>deadline+30 AND created>=?))",
+                (now, self.day_start())).fetchall()
+            for row in interrupted:
+                self.resume_interrupted_reminder(conn, row, now)
             rows = conn.execute("SELECT * FROM jobs WHERE status='running'").fetchall()
             for row in rows:
+                if row['kind'] in {'once', 'recurring'} and row['deadline'] and row['deadline'] <= now and self.resume_interrupted_reminder(conn, row, now):
+                    continue
                 if row['trigger_key'].startswith('daily:') and row['kind'] in {'feed', 'ideas'}:
                     config = json.loads(row['config'])
                     next_run = self.delay_content_recovery(conn, row, config, 'sleep_interrupted', now)
@@ -1064,6 +1089,8 @@ class Gateway:
             status, error, error_code, result, retry = 'failed', '电脑运行中断，清醒后补更新', 'sleep_interrupted', '', False
         elif automatic and status == 'succeeded' and now > deadline:
             status, error, error_code, result = 'timed_out', '作业执行期限已到，未发布迟到内容', 'job_timeout', ''
+        interrupted_reminder = (job['kind'] in {'once', 'recurring'} and now >= deadline
+                                and (job['id'] in self._sleep_interrupted or now - (self._last_tick or now) > 30))
         self._sleep_interrupted.discard(job['id'])
         # Explicit cancellation wins even if it arrives while a response finishes.
         if self.require("jobs", job["id"])["status"] == "cancelled":
@@ -1083,6 +1110,12 @@ class Gateway:
             conn.execute("UPDATE attempts SET status=?,ended=?,error=? WHERE id=?", (attempt_status, now, error, attempt_id))
             stored_result = packed(result) if isinstance(result, dict) else result
             conn.execute("UPDATE jobs SET status=?,result=?,error=?,error_code=?,next_run=?,updated=? WHERE id=?", (status, stored_result, error, error_code, next_run, now, job["id"]))
+            if interrupted_reminder and status in {'failed', 'timed_out', 'pending'}:
+                if self.resume_interrupted_reminder(conn, job, now):
+                    status = 'pending'
+                elif status == 'pending' and self.running:
+                    status, error = 'timed_out', '提醒作业中断，已超过执行期限'
+                    conn.execute("UPDATE jobs SET status=?,error=?,error_code='sleep_interrupted' WHERE id=?", (status, error, job['id']))
             session = conn.execute("SELECT state FROM sessions WHERE id=?", (job["session_id"],)).fetchone() if job["session_id"] else None
             if status == "succeeded" and job["kind"] == "session_meta" and session and session["state"] != "deleting":
                 meta = json.loads(job["input"])
@@ -1103,6 +1136,10 @@ class Gateway:
                     conn.execute("INSERT INTO messages(id,session_id,role,content,job_id,created) VALUES(?,?,?,?,?,?)", (uid(), job["session_id"], "assistant", "这次约定的提醒已准备，等待你审核后投递。", job["id"], now))
             if status == "succeeded" and job["kind"] == "once":
                 conn.execute("UPDATE tasks SET state='completed',updated=? WHERE id=?", (now, job["task_id"]))
+        if (job['kind'] in {'once', 'recurring'} and status in {'failed', 'timed_out'}
+                and not self.db.one("SELECT id FROM actions WHERE job_id=? AND kind='notification'", (job['id'],))):
+            title = self.require('tasks', job['task_id'])['title']
+            self.propose(job['id'], 'notification', title, 'inbox', '提醒时间已到。本次未能生成约定的内容。')
         self.db.event(f"job.{status}", {"attempt_id": attempt_id, "error": error}, job["id"], now)
         await self.emit(job["id"], "done" if status != "pending" else "status", {"status": status, "result": result, "error": error, "message": "稍后重试" if retry else error})
         return True

@@ -392,3 +392,59 @@ async def test_tool_discussion_does_not_require_execution(g, text):
     assert g.require("jobs", job["id"])["status"] == "succeeded"
     assert len(g.model.calls) == 1
     assert not g.snapshot()["schedules"]
+
+
+async def test_proactive_chat_requires_schedule_receipt_on_first_request(g):
+    task = {'title': '晨间聊天', 'instruction': '主动找我聊几句', 'kind': 'recurring',
+            'next_due': g.clock() + 86400, 'interval_seconds': 86400}
+    replies = iter([
+        Reply([{'type': 'text', 'text': '需要你确认一下再保存。'}]),
+        Reply([{'type': 'tool_use', 'id': 'morning', 'name': 'schedule_task', 'input': task}]),
+        Reply([{'type': 'text', 'text': '晨间聊天已安排。'}]),
+    ])
+
+    class ReluctantModel:
+        async def chat(self, **request):
+            return next(replies)
+
+    g.model = ReluctantModel()
+    job = g.chat('每天8:00主动来找我聊几句。不要使用固定的问候模板。')
+    await g.run_one()
+    assert g.require('jobs', job['id'])['result'] == '晨间聊天已安排。'
+    assert len(g.snapshot()['schedules']) == 1
+
+
+@pytest.mark.parametrize('request_text', ['我每天8点跑步。', '我室友每天8点提醒我起床。', '每天8点朋友会找我聊天。',
+                                         '请解释“每天8点来找我聊天”。',
+                                         '不要每天8点找我聊天。', '不用每天8点叫醒我。', '确认'])
+async def test_ordinary_chat_cannot_authorize_a_schedule(g, request_text):
+    job = g.chat(request_text)
+    with pytest.raises(ValueError, match='没有明确授权'):
+        await Agent(g).call_tool(job, g.job_config(), 'schedule_task', {
+            'title': '晨间聊天', 'instruction': '聊几句', 'kind': 'once', 'next_due': g.clock() + 60})
+
+
+async def test_confirmation_only_applies_to_previous_unsaved_requested_reminder(g):
+    first = g.chat('每天早上八点来找我聊天')
+    # Recreate the unanswered confirmation left by the previous version.
+    g.db.execute("UPDATE jobs SET status='succeeded' WHERE id=?", (first['id'],))
+    g.db.execute("INSERT INTO messages(id, session_id,role,content,job_id,created) VALUES('ask',?,'assistant','确认保存这个提醒吗？',?,?)",
+                 (first['session_id'], first['id'], g.clock()))
+    args = {'title': '晨间聊天', 'instruction': '聊几句', 'kind': 'recurring',
+            'next_due': g.clock()+86400, 'interval_seconds': 86400}
+    followup = g.chat('确认', first['session_id'])
+    saved = await Agent(g).call_tool(followup, g.job_config(), 'schedule_task', args)
+    assert g.require('schedules', saved['id'])['enabled']
+    again = g.chat('确认', first['session_id'])
+    with pytest.raises(ValueError):
+        await Agent(g).call_tool(again, g.job_config(), 'schedule_task', args)
+
+
+async def test_time_reply_completes_the_previous_reminder(g):
+    first = g.chat('提醒我交报告')
+    g.db.execute("INSERT INTO messages(id,session_id,role,content,job_id,created) VALUES('ask',?,'assistant','几点提醒你？',?,?)",
+                 (first['session_id'], first['id'], g.clock()))
+    when = g.chat('明早八点', first['session_id'])
+    saved = await Agent(g).call_tool(when, g.job_config(), 'schedule_task', {
+        'title': '交报告', 'instruction': '交报告', 'kind': 'once', 'next_due': g.clock()+3600})
+    assert g.require('tasks', saved['task_id'])['session_id'] == first['session_id']

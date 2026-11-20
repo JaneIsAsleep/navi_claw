@@ -182,6 +182,50 @@ async def test_invalid_batch_never_publishes(g,change):
     assert not [r for r in g.snapshot()['records'] if r['kind']=='idea']
 
 
+@pytest.mark.parametrize("with_goal", [True, False])
+async def test_ideas_use_active_subscriptions_even_without_articles(g, monkeypatch, with_goal):
+    source = g.feeds.follow("python")
+    paused = g.feeds.follow("nasa")
+    g.feeds.save_source(paused["id"], {**paused["payload"], "enabled": False})
+    completed = g.record("goal", {"title": "上一场分享", "state": "completed"})
+    goal = g.record("goal", {"title": "准备社团分享", "next_step": "试讲开头三分钟"}) if with_goal else None
+    async def offline(job_id):
+        pytest.fail("构想选题无需联网读取新闻")
+    monkeypatch.setattr(g.feeds, "refresh", offline)
+    refs = [source["id"]] + ([goal["id"]] if goal else [])
+    g.model = ContentModel(ideas(refs))
+    g.tick()
+    await g.run_one()
+    await g.run_one()
+    request = json.loads(g.model.calls[0]["messages"][0]["content"])
+    assert request["context"]["subscriptions"] == [{"id": source["id"], "title": "Python 官方博客"}]
+    assert [row["id"] for row in request["context"]["goals"]] == ([goal["id"]] if goal else [])
+    if goal:
+        assert request["context"]["goals"][0]["next_step"] == "试讲开头三分钟"
+    assert completed["id"] not in request["allowed_reference_ids"]
+    assert "materials" not in request
+    assert len([r for r in g.snapshot()["records"] if r["kind"] == "idea"]) == 5
+
+
+@pytest.mark.parametrize("problem", ["only_article", "ignored_goal", "only_summaries"])
+async def test_news_cannot_displace_personal_ideas(g, problem):
+    goal = g.record("goal", {"title": "给同学试讲", "next_step": "选一道练习题"})
+    source = g.feeds.follow("python")
+    batch = ideas([source["id"]] if problem == "ignored_goal" else [goal["id"]])
+    if problem == "only_article":
+        batch["items"][0]["context_refs"] = ["rss-release"]
+    if problem == "only_summaries":
+        for item in batch["items"]:
+            item["action_kind"] = "source_summary"
+    previous = g.record("idea", ideas()["items"][0])
+    g.model = ContentModel(batch)
+    g.tick()
+    await g.run_one()
+    await g.run_one()
+    assert g.db.one("SELECT error_code FROM jobs WHERE kind='ideas'")["error_code"] == "content_validation_error"
+    assert [r["id"] for r in g.snapshot()["records"] if r["kind"] == "idea"] == [previous["id"]]
+
+
 async def test_feed_sources_are_gateway_owned_and_pause_is_idempotent(g):
     g.model=ContentModel(ideas())
     g.skills.save_items([{'id':'reading','title':'阅读材料','priority':3}])
