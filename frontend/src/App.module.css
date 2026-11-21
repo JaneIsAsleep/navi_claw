@@ -124,6 +124,7 @@
 .modal textarea { resize: vertical; }
 .fieldPair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .settingsActions { margin-top: 24px; }
+.endpointAddress { overflow-wrap: anywhere; }
 .actionCard { align-self: stretch; margin: 16px 0; padding: 16px 20px; border: 1px solid #cbd6dd; border-radius: var(--radius); background: white; }
 .actionCard > p { font-size: 14px; }
 .actionHeading { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }

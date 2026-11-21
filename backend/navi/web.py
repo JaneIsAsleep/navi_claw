@@ -249,6 +249,13 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
         gateway.db.event("settings.updated", {"workflow": result["workflow"], "policy": result["notification_policy"]}, now=gateway.clock())
         return result
 
+    @app.delete("/api/settings/endpoints")
+    async def delete_endpoint(request: Request):
+        values = await body(request)
+        result = gateway.settings.delete_endpoint(values.get("endpoint_id"))
+        gateway.db.event("settings.endpoint_deleted", {}, now=gateway.clock())
+        return result
+
     @app.post("/api/settings/check")
     async def check_connection():
         with gateway.db.transaction() as conn:

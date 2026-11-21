@@ -150,8 +150,9 @@ class Agent:
         automatic = job['kind'] in {'feed', 'ideas'} and job['trigger_key'].startswith('daily:')
         if automatic and current['deadline'] and self.g.clock() > current['deadline']:
             raise AgentError('自动更新执行期限已到', code='sleep_interrupted' if job['id'] in self.g._sleep_interrupted else 'job_timeout')
-        if not self.g.settings.api_key() and self.g.model.__class__.__name__ == "DeepSeek":
-            raise AgentError("请先在设置中配置 DeepSeek API 密钥")
+        api_key = self.g.settings.api_key(config)
+        if not api_key and self.g.model.__class__.__name__ == "DeepSeek":
+            raise AgentError("请先在设置中为当前 Endpoint 配置 API 密钥", code='model_auth_error')
         reservation = self.g.reserve_call(job["id"], len((system + packed(messages) + packed(tools)).encode()), config)
 
         async def delta(chunk):
@@ -159,7 +160,7 @@ class Agent:
                 await self.g.emit(job["id"], "delta", {"text": chunk})
 
         reply = await self.g.model.chat(system=system, messages=messages, tools=tools, config=config,
-                                        api_key=self.g.settings.api_key(), on_delta=delta)
+                                        api_key=api_key, on_delta=delta)
         self.g.finish_usage(reservation, reply)
         if self.g.require("jobs", job["id"])["status"] == "cancelled":
             raise asyncio.CancelledError

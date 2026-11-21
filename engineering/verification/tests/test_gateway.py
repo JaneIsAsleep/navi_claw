@@ -315,6 +315,91 @@ def test_invalid_config_is_rejected(g):
         with pytest.raises(ValueError): g.settings.update(value)
 
 
+async def test_endpoint_history_and_credentials_through_settings_api(g, monkeypatch):
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-official-key")
+    first = {"messages": "https://first.example/anthropic/generate/", "chat_completions": "https://first.example/chat"}
+    second = {**first, "chat_completions": "https://second.example/openai/chat"}
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(g)), base_url="http://127.0.0.1:8766") as web:
+        initial = (await web.get("/api/state")).json()["settings"]
+        assert initial["endpoint_id"] == "" and initial["endpoint_profiles"] == []
+        assert initial["official_endpoints"]["messages"] == "https://api.deepseek.com/anthropic/v1/messages"
+        saved = await web.put("/api/settings", json={"endpoint_urls": first})
+        assert saved.status_code == 200
+        first_id = saved.json()["endpoint_id"]
+        assert saved.json()["endpoint_profiles"] == [{"id": first_id, "urls": first}]
+        assert not saved.json()["api_key_configured"]
+        assert g.settings.api_key() == ""
+        assert (await web.put("/api/settings", json={"api_key": "test-first-key"})).json()["api_key_configured"]
+        first_job_config = g.job_config()
+        saved = (await web.put("/api/settings", json={"endpoint_urls": second, "api_key": "test-second-key"})).json()
+        second_id = saved["endpoint_id"]
+        assert [profile["urls"] for profile in saved["endpoint_profiles"]] == [second, first]
+        assert g.settings.api_key(first_job_config) == "test-first-key"
+        assert g.settings.api_key() == "test-second-key"
+        assert (await web.put("/api/settings", json={"endpoint_id": first_id, "protocol": "chat_completions"})).json()["endpoint_id"] == first_id
+        assert g.job_config()["endpoint_urls"] == first
+        assert g.settings.api_key() == "test-first-key"
+        assert (await web.put("/api/settings", json={"endpoint_id": ""})).json()["endpoint_id"] == ""
+        assert g.settings.api_key() == "test-official-key"
+        for bad_url in ("https://user:secret@example.com/v1/", "https://example.com/v1/?key=secret", "http://example.com/v1/", "file:///tmp/v1/", ""):
+            assert (await web.put("/api/settings", json={"endpoint_urls": {**first, "messages": bad_url}})).status_code == 400
+        assert (await web.put("/api/settings", json={"endpoint_urls": {"messages": first["messages"]}})).status_code == 400
+        assert (await web.put("/api/settings", json={"endpoint_urls": first})).json()["endpoint_id"] == first_id
+        public = (await web.get("/api/state")).text
+        assert "test-first-key" not in public and "test-second-key" not in public
+        assert "endpoint_profiles" not in first_job_config
+    reloaded = Gateway(ROOT, g.directory, Model(), g.clock)
+    assert [profile["id"] for profile in reloaded.settings.public()["endpoint_profiles"]] == [second_id, first_id]
+    assert reloaded.settings.api_key(first_job_config) == "test-first-key"
+
+
+async def test_delete_endpoint_clears_key_and_falls_back_only_for_active_endpoint(g, monkeypatch):
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    first = {"messages": "https://first.example/v1/messages", "chat_completions": "https://first.example/v1/chat/completions"}
+    second = {"messages": "https://second.example/v1/messages", "chat_completions": "https://second.example/v1/chat/completions"}
+    g.settings.update({"api_key": "test-official"})
+    first_id = g.settings.update({"endpoint_urls": first, "api_key": "test-first"})["endpoint_id"]
+    old_first_config = g.job_config()
+    second_id = g.settings.update({"endpoint_urls": second, "api_key": "test-second"})["endpoint_id"]
+    old_second_config = g.job_config()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(g)), base_url="http://127.0.0.1:8766") as web:
+        rejected = await web.request("DELETE", "/api/settings/endpoints", json={"endpoint_id": ""})
+        assert rejected.status_code == 400
+        deleted = await web.request("DELETE", "/api/settings/endpoints", json={"endpoint_id": first_id})
+        assert deleted.status_code == 200
+        assert deleted.json()["endpoint_id"] == second_id and deleted.json()["endpoint_profiles"] == [{"id": second_id, "urls": second}]
+        assert g.settings.api_key(old_first_config) == "" and g.settings.api_key() == "test-second"
+        deleted = await web.request("DELETE", "/api/settings/endpoints", json={"endpoint_id": second_id})
+        assert deleted.status_code == 200
+        assert deleted.json()["endpoint_id"] == "" and deleted.json()["endpoint_profiles"] == []
+        assert g.settings.api_key(old_second_config) == "" and g.settings.api_key() == "test-official"
+        assert not (await web.put("/api/settings", json={"endpoint_urls": first})).json()["api_key_configured"]
+    reloaded = Gateway(ROOT, g.directory, Model(), g.clock)
+    assert [profile["urls"] for profile in reloaded.settings.public()["endpoint_profiles"]] == [first]
+    assert reloaded.settings.api_key() == ""
+
+
+def test_legacy_endpoint_migration_preserves_keys_and_existing_routes(g):
+    active = "https://first.example/anthropic/v1/"
+    second = "https://second.example/chat/completions"
+    with g.db.transaction() as conn:
+        g.settings.store(conn, "endpoint_url", active)
+        g.settings.store(conn, "endpoint_history", [second, active])
+    g.settings.write_credentials({"deepseek_api_key": "test-official", "endpoint_keys": {
+        active: "test-active", second: "test-second",
+    }})
+    reloaded = Gateway(ROOT, g.directory, Model(), g.clock)
+    public = reloaded.settings.public()
+    assert len(public["endpoint_profiles"]) == 2
+    assert public["endpoint_profiles"][0]["id"] == public["endpoint_id"]
+    assert public["endpoint_profiles"][0]["urls"] == {"messages": active + "messages", "chat_completions": active + "chat/completions"}
+    assert public["endpoint_profiles"][1]["urls"]["chat_completions"] == second
+    assert reloaded.settings.api_key() == "test-active"
+    assert reloaded.settings.api_key({"endpoint_url": second}) == "test-second"
+    assert reloaded.settings.api_key({"endpoint_url": ""}) == "test-official"
+    assert "endpoint_keys" not in reloaded.settings.credentials()
+
+
 def test_single_heartbeat_and_invalid_record_payloads_are_rejected(g):
     first = create_due(g)
     with pytest.raises(ValueError): create_due(g)

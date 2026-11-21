@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowUp, BookOpen, Check, ChevronRight, ChevronLeft, Heart, Users, Wallet, Briefcase, Palette, Zap, Copy, Download, FileText, Flag, Lightbulb, Menu, MessageCircle, MoreHorizontal, Plus, Radio, Search, Settings, Square, X } from 'lucide-react'
 import { api, labels, localDate, terminal, time, type Action, type CheckItem, type Config, type FeedImage, type GoalSetup, type GoalCard, type Detail, type Editor, type Item, type Job, type Message, type Reference, type Schedule, type Session, type State, type Tab } from './data'
+import type { EndpointProfile, EndpointUrls, Protocol } from './data'
 import { Dialog } from './Dialog'
 import { SearchDialog } from './SearchDialog'
 import { SourcesDialog } from './SourcesDialog'
@@ -25,6 +26,7 @@ function readingPositions(): Record<string, number> {
   try { return JSON.parse(localStorage.getItem('navi-reading-positions') || '{}') } catch { return {} }
 }
 const eventLabels: Record<string, string> = { 'record.saved': '目标已保存或更新', 'schedule.created': '已安排关联提醒', 'schedule.updated': '关联提醒已调整', 'schedule.triggered': '约定时间已到', 'job.queued': '工作已排队', 'job.started': '开始处理', 'job.succeeded': '结果已生成', 'job.failed': '执行失败', 'job.cancelled': '工作已取消', 'delivery.completed': '已实际投递', 'action.proposed': '等待审核具体行动', 'action.decided': '审核决定已保存' }
+const emptyEndpointUrls: EndpointUrls = { messages: '', chat_completions: '' }
 
 export default function App() {
   const [state, setState] = useState<State | null>(null)
@@ -73,6 +75,11 @@ export default function App() {
   const [deletion, setDeletion] = useState<{ session?: Session; reminders?: { id: string; title: string; kind: string }[]; item?: Item; check?: CheckItem } | null>(null)
   const [config, setConfig] = useState<Config | null>(null)
   const [apiKey, setApiKey] = useState('')
+  const [addingEndpoint, setAddingEndpoint] = useState(false)
+  const [endpointUrls, setEndpointUrls] = useState(emptyEndpointUrls)
+  const [endpointToDelete, setEndpointToDelete] = useState<EndpointProfile | null>(null)
+  const selectedEndpoint = config?.endpoint_profiles.find(profile => profile.id === config.endpoint_id)
+  const endpointSelect = useRef<HTMLSelectElement>(null)
   const [connectionJob, setConnectionJob] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const chatRef = useRef<HTMLElement>(null)
@@ -96,7 +103,7 @@ export default function App() {
   const busy = state?.jobs.find(job => job.session_id === sessionId && !terminal(job.status) && ['chat', 'ideas', 'draft', 'compact', 'connection', 'goal_setup', 'goal_save'].includes(job.kind))
   const pending = state?.actions.filter(row => row.status === 'pending').length || 0
   const modalOpen = Boolean(editor || deletion || audit)
-  const overlayOpen = modalOpen || searchOpen || !!idea || sourcesOpen || completedOpen || !!goalCategory || !!feedImage
+  const overlayOpen = modalOpen || searchOpen || !!idea || sourcesOpen || completedOpen || !!goalCategory || !!feedImage || !!endpointToDelete
 
   function saveDraft(text: string, refs = references, kind = composerKind) {
     setInput(text); setReferences(refs); setComposerKind(kind)
@@ -427,7 +434,7 @@ export default function App() {
     <aside className={s.sidebar + (navOpen ? ' ' + s.sidebarOpen : '')} aria-label="主导航" inert={assistant || overlayOpen || undefined}>
       <div className={s.brand}>{page !== 'chat' && avatar()}{navOpen && <button id="close-navigation" className={s.iconButton} aria-label="关闭导航" onClick={() => setNavOpen(false)}><X size={20} /></button>}</div>
       <nav>{nav.map(({ key, label, icon: Icon }) => <a key={key} href={'#' + key} aria-label={label} aria-current={page === key ? 'page' : undefined} className={s.navItem + (page === key ? ' ' + s.selected : '')} onClick={event => { event.preventDefault(); navigate(key) }}><Icon size={22} /><span>{label}</span></a>)}</nav>
-      <div className={s.sidebarBottom}><a href="#settings" className={s.navItem + (page === 'settings' ? ' ' + s.selected : '')} aria-label="设置" onClick={event => { event.preventDefault(); setConfig(state?.settings || null); navigate('settings') }}><Settings size={22} /><span>设置</span></a><span className={connected ? s.onlineDot : s.offlineDot} title={connected ? '本机服务可访问' : '本机连接中断'} /></div>
+      <div className={s.sidebarBottom}><a href="#settings" className={s.navItem + (page === 'settings' ? ' ' + s.selected : '')} aria-label="设置" onClick={event => { event.preventDefault(); setConfig(state?.settings || null); setAddingEndpoint(false); setApiKey(''); navigate('settings') }}><Settings size={22} /><span>设置</span></a><span className={connected ? s.onlineDot : s.offlineDot} title={connected ? '本机服务可访问' : '本机连接中断'} /></div>
     </aside>
     {page === 'chat' && <aside className={s.sessions + (sessionOpen ? ' ' + s.sessionsOpen : '')} aria-label="会话列表" inert={assistant || overlayOpen || navOpen || undefined}>
       <div className={s.sessionHeader}><span>对话</span><button className={s.iconButton} aria-label="新副对话" onClick={newChat}><Plus size={20} /></button></div>
@@ -460,18 +467,68 @@ export default function App() {
           </>}
           {['idea', 'artifact'].includes(page) && <div className={s.rows}>{records.map(row => <article className={s.row} key={row.id}><div className={s.rowMain}><button className={s.rowTitle} onClick={() => void openRecord(row)}>{row.payload.title}</button><p>{page === 'idea' ? String(row.payload.abstract || row.payload.body?.slice(0,100) || '') : row.payload.body?.slice(0,220)}</p>{page === 'artifact' && <><div className={s.meta}><span>{time(row.created)}</span><span>{row.payload.filename ? '已导出文件' : '草稿'}</span></div><div className={s.rowActions}><a className={s.textButton} href={'/api/artifacts/' + row.id + '/download'}><Download size={16} />下载</a></div></>}</div></article>)}{!records.length && <p className={s.empty}>{page === 'idea' ? '还没有构想。每日更新成功后会显示五条，失败时保留上一批。' : '还没有成果。生成的草稿和审批后的文件会保存在这里。'}</p>}</div>}
           {page === 'goal' && <><h2>设定目标</h2><div className={s.goalCategories}>{[{id:'health',label:'健康',icon:Heart},{id:'relationships',label:'人际关系',icon:Users},{id:'finance',label:'财务',icon:Wallet},{id:'career',label:'职涯',icon:Briefcase},{id:'interests',label:'兴趣',icon:Palette},{id:'productivity',label:'生产力',icon:Zap},{id:'other',label:'其他',icon:Flag}].map(({id,label,icon:Icon}) => <button className={s.categoryRow} disabled={working} key={id} onClick={() => { capture(); setError(''); setGoalCategory({ id, label }) }}><Icon size={23} /><span>{label}</span><ChevronRight size={20} /></button>)}</div></>}
-          {page === 'settings' && config && <form className={s.settings} onSubmit={event => { event.preventDefault(); void act(async () => { const { api_key_configured: _configured, ...fields } = config; const next = await api<Config>('/settings', 'PUT', { ...fields, ...(apiKey ? { api_key: apiKey } : {}) }); setConfig(next); setApiKey('') }, '设置已保存。连接是否可用须看真实检查结果。') }}>
-            <h2>DeepSeek 连接</h2><p className={s.subtle}>{state?.settings.api_key_configured ? '密钥已保存在本机，不回显。' : '在本机输入密钥后进行真实检查。'}</p><label>API 密钥<input type="password" autoComplete="new-password" placeholder="留空保留现有密钥" value={apiKey} onChange={event => setApiKey(event.target.value)} /></label><div className={s.rowActions}><button type="submit" className={s.primary} disabled={working}>保存设置</button><button type="button" className={s.secondary} disabled={working || !!connectionJob || !state?.settings.api_key_configured} onClick={() => void act(async () => { const job = await api<Job>('/settings/check', 'POST', {}); setConnectionJob(job.id); setNotice('正在进行真实检查') })}>真实连接检查</button></div>
+          {page === 'settings' && config && <form className={s.settings} onSubmit={event => {
+            event.preventDefault()
+            void act(async () => {
+              const { api_key_configured: _configured, endpoint_profiles: _profiles, official_endpoints: _official, ...fields } = config
+              const next = await api<Config>('/settings', 'PUT', { ...fields, ...(addingEndpoint ? { endpoint_urls: endpointUrls } : {}), ...(apiKey.trim() ? { api_key: apiKey } : {}) })
+              setConfig(next); setAddingEndpoint(false); setApiKey('')
+            }, '设置已保存。连接是否可用须看真实检查结果。')
+          }}>
+            <h2>DeepSeek 连接</h2>
+            <label>Endpoint<select ref={endpointSelect} value={addingEndpoint ? 'new' : config.endpoint_id} onChange={event => {
+              const value = event.target.value
+              setAddingEndpoint(value === 'new')
+              setEndpointUrls(emptyEndpointUrls)
+              setConfig({ ...config, endpoint_id: value === 'new' ? '' : value })
+              setApiKey('')
+            }}>
+              <option value="">DeepSeek 官方（默认）</option>
+              {config.endpoint_profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.urls[config.protocol]}</option>)}
+              <option value="new">添加 Endpoint…</option>
+            </select></label>
+            <label>接口协议<select value={config.protocol} onChange={event => setConfig({ ...config, protocol: event.target.value as Protocol })}><option value="messages">Messages</option><option value="chat_completions">Chat Completions</option></select></label>
+            {addingEndpoint ? <>
+              <label>Messages 完整 URL<input type="url" required maxLength={2048} placeholder="https://example.com/v1/messages" aria-describedby="messages-url-hint" value={endpointUrls.messages} onChange={event => setEndpointUrls({ ...endpointUrls, messages: event.target.value })} /><span id="messages-url-hint" className={s.subtle}>常见路径：/v1/messages 或 /anthropic/v1/messages。</span></label>
+              <label>Chat Completions 完整 URL<input type="url" required maxLength={2048} placeholder="https://example.com/v1/chat/completions" aria-describedby="completions-url-hint" value={endpointUrls.chat_completions} onChange={event => setEndpointUrls({ ...endpointUrls, chat_completions: event.target.value })} /><span id="completions-url-hint" className={s.subtle}>常见路径：/v1/chat/completions，也可能是 /chat/completions。</span></label>
+              <p className={s.subtle}>两条 URL 都以服务商文档为准。Navi 按协议使用对应地址，不追加路径。</p>
+            </> : <>
+              <p className={s.endpointAddress}>Messages：{(selectedEndpoint?.urls || config.official_endpoints).messages}<br />Chat Completions：{(selectedEndpoint?.urls || config.official_endpoints).chat_completions}</p>
+              {selectedEndpoint && <div className={s.rowActions}>
+                <button type="button" className={s.textButton} disabled={working} onClick={() => { setEndpointUrls(selectedEndpoint.urls); setAddingEndpoint(true); setApiKey('') }}>复制并修改地址</button>
+                <button type="button" className={s.dangerText} disabled={working} onClick={() => { setError(''); setEndpointToDelete(selectedEndpoint) }}>删除所选 Endpoint</button>
+              </div>}
+            </>}
+            <label>API 密钥<input type="password" autoComplete="new-password" placeholder="留空保留该配置已有的密钥" value={apiKey} onChange={event => setApiKey(event.target.value)} /></label>
+            <p className={s.subtle}>{!addingEndpoint && config.endpoint_id === state?.settings.endpoint_id && state.settings.api_key_configured ? '此配置的密钥已保存在本机，不回显。' : '每组配置独立保存密钥，两条 URL 共用该密钥。请仅填写你信任的服务地址。'}</p>
+            <div className={s.rowActions}><button type="submit" className={s.primary} disabled={working}>保存设置</button><button type="button" className={s.secondary} disabled={working || !!connectionJob || !state?.settings.api_key_configured || addingEndpoint || !!apiKey.trim() || config.endpoint_id !== state.settings.endpoint_id || config.protocol !== state.settings.protocol || config.model !== state.settings.model} onClick={() => void act(async () => { const job = await api<Job>('/settings/check', 'POST', {}); setConnectionJob(job.id); setNotice('正在进行真实检查') })}>真实连接检查</button></div>
             <h2>提醒与授权</h2><label>普通站内提醒<select value={config.notification_policy} onChange={event => setConfig({ ...config, notification_policy: event.target.value })}><option value="daily">日常：按已有授权自动发送</option><option value="strict">严格：每条提醒人工审批</option></select></label><p className={s.subtle}>导出文件始终先审批。未批准内容不会进入 Outbox。</p><label>时区<input value={config.timezone} onChange={event => setConfig({ ...config, timezone: event.target.value })} /></label>
-            <h2>隐私与运行</h2><p>模型调用会将本次有效会话、摘要、记忆、目标和引用资料发给 DeepSeek。停用记忆影响以后的调用。</p><p>双击 start.command 启动，启动终端与浏览器可以关闭。真正停止使用 stop.command。电脑休眠期间无法实时执行，恢复后每个调度最多补做一次。</p>
+            <h2>隐私与运行</h2><p>模型调用会将本次有效会话、摘要、记忆、目标和引用资料发给配置的模型服务。停用记忆影响以后的调用。</p><p>双击 start.command 启动，启动终端与浏览器可以关闭。真正停止使用 stop.command。电脑休眠期间无法实时执行，恢复后每个调度最多补做一次。</p>
             {state && <><h2>今日使用</h2><p>{state.usage.requests} 次请求 · {state.usage.input_tokens + state.usage.output_tokens} tokens</p><p className={s.subtle}>{state.usage.cost_configured ? '按当前费率粗估 ' + state.usage.estimated_cost.toFixed(4) + ' ' + state.usage.currency : '尚未配置费率，以服务商账单为准。'}</p></>}
             <details className={s.advanced}><summary>预算与调用限制</summary><p className={s.subtle}>每日上限设为 0 时不设置本地日累计上限；每个作业的调用次数和执行期限仍有限制。</p><div className={s.fieldPair}>{[['request_timeout', '请求超时，秒'], ['job_timeout', '作业期限，秒'], ['max_model_calls', '单作业模型调用次数'], ['max_tool_calls', '单作业工具调用次数'], ['max_output_tokens', '输出 token 上限'], ['daily_requests', '每日请求上限'], ['daily_tokens', '每日 token 上限'], ['input_price_per_million', '每百万输入 token 费率'], ['output_price_per_million', '每百万输出 token 费率']].map(([key, label]) => <label key={key}>{label}<input type="number" min={key.includes('price') || key.startsWith('daily_') ? 0 : 1} step="any" value={Number(config[key])} onChange={event => setConfig({ ...config, [key]: Number(event.target.value) })} /></label>)}</div></details>
-            <details className={s.advanced}><summary>高级设置与运行记录</summary><label>模型<input value={config.model} onChange={event => setConfig({ ...config, model: event.target.value })} /></label><label>接口协议<select value={config.protocol} onChange={event => setConfig({ ...config, protocol: event.target.value })}><option value="messages">Messages</option><option value="chat_completions">Chat Completions</option></select></label><label>简报工作流<select value={config.workflow} onChange={event => setConfig({ ...config, workflow: event.target.value })}><option value="priority_briefing">重要事项</option><option value="deadline_briefing">临近截止事项</option></select></label><label>费用货币<input value={String(config.price_currency)} onChange={event => setConfig({ ...config, price_currency: event.target.value })} /></label><button type="button" className={s.textButton} onClick={() => void history('/audit')}>完整运行记录</button><button type="button" className={s.textButton} disabled={!sessionId || !!busy} onClick={() => { navigate('chat'); saveDraft('请压缩当前会话，保留目标和未完成工作', references, 'compact'); setNotice('发送后将调用模型压缩，原始历史仍保留。') }}>准备手动压缩当前对话</button></details>
+            <details className={s.advanced}><summary>高级设置与运行记录</summary><label>模型<input value={config.model} onChange={event => setConfig({ ...config, model: event.target.value })} /></label><label>简报工作流<select value={config.workflow} onChange={event => setConfig({ ...config, workflow: event.target.value })}><option value="priority_briefing">重要事项</option><option value="deadline_briefing">临近截止事项</option></select></label><label>费用货币<input value={String(config.price_currency)} onChange={event => setConfig({ ...config, price_currency: event.target.value })} /></label><button type="button" className={s.textButton} onClick={() => void history('/audit')}>完整运行记录</button><button type="button" className={s.textButton} disabled={!sessionId || !!busy} onClick={() => { navigate('chat'); saveDraft('请压缩当前会话，保留目标和未完成工作', references, 'compact'); setNotice('发送后将调用模型压缩，原始历史仍保留。') }}>准备手动压缩当前对话</button></details>
           </form>}
         </>}
       </section>}
       {state && <FeedPanel snapshot={state.records.filter(row => row.kind === 'feed' && row.payload.origin === 'generated')} header={contentHeader} active={page === 'feed' && !detail} layoutKey={String(feedChatVisible) + pairedView} scrollRef={feedRef} initialTop={positions.current.feed || 0} position={top => { positions.current.feed = top; localStorage.setItem('navi-reading-positions', JSON.stringify(positions.current)) }} discuss={discussFeed} detail={row => void openRecord(row)} showImage={(image, node) => { feedImageTrigger.current = node; setFeedImage(image) }} />}
     </main>
+    {endpointToDelete && <Dialog title="删除 Endpoint" trigger={endpointSelect.current} cancelFirst close={() => { if (!working) { setEndpointToDelete(null); setError('') } }}>
+      <p>将删除这组地址和它保存的本机密钥。如果它正在使用，Navi 会切回 DeepSeek 官方默认连接。</p>
+      <p className={s.endpointAddress}>Messages：{endpointToDelete.urls.messages}<br />Chat Completions：{endpointToDelete.urls.chat_completions}</p>
+      {error && <p role="alert" className={s.failureText}>{error}</p>}
+      <div className={s.rowActions}>
+        <button data-cancel className={s.secondary} disabled={working} onClick={() => { setEndpointToDelete(null); setError('') }}>取消</button>
+        <button className={s.danger} disabled={working} onClick={() => void act(async () => {
+          const next = await api<Config>('/settings/endpoints', 'DELETE', { endpoint_id: endpointToDelete.id })
+          setConfig(current => current && { ...current,
+            endpoint_id: next.endpoint_id,
+            endpoint_profiles: next.endpoint_profiles,
+            api_key_configured: next.api_key_configured,
+          })
+          setApiKey(''); setEndpointToDelete(null)
+        }, 'Endpoint 已删除。')}>确认删除</button>
+      </div>
+    </Dialog>}
     {feedImage && <Dialog title="文章配图" trigger={feedImageTrigger.current} close={() => setFeedImage(null)}><img className={s.feedLargeImage} src={'/api/feed-media/' + feedImage.asset_id} alt={feedImage.alt} /><p className={s.subtle}>{feedImage.alt}</p><a href={feedImage.source_url} target="_blank" rel="noreferrer">图片原始来源</a></Dialog>}
     {goalCategory && <Dialog title={'设定' + goalCategory.label + '目标'} trigger={trigger.current} close={() => { if (!goalStarting.current) setGoalCategory(null) }}><p>我们会通过短对话一起确定目标和下一步，保存后在目标页跟进。</p>{error && <p role="alert" className={s.failureText}>{error}</p>}<button className={s.primary} disabled={working} onClick={() => void startGoal(goalCategory.id)}>{working ? '正在开始' : '现在就开始'}</button></Dialog>}
     {completedOpen && <Dialog title="已完成目标" trigger={trigger.current} close={() => { setCompletedOpen(false); setMenuId('') }}>{state?.records.filter(row => row.kind === 'goal' && row.payload.state === 'completed').map(row => <div className={s.goalRow} key={row.id}><input type="checkbox" checked disabled={working} aria-label={'恢复目标 ' + row.payload.title} onChange={() => actPath('/goals/' + row.id + '/state','POST',{operation:'reactivate'},'目标已恢复，原提醒保持结束')} /><span>{String(row.payload.abstract || row.payload.title)}</span><div className={s.goalMore}><button className={s.iconButton} aria-label={'管理已完成目标 ' + row.payload.title} aria-expanded={menuId === row.id} onClick={event => { menuTrigger.current = event.currentTarget; setMenuId(menuId === row.id ? '' : row.id) }}><MoreHorizontal size={18} /></button>{menuId === row.id && <div className={s.optionsMenu}><button className={s.dangerText} onClick={() => { removeItem(row); setCompletedOpen(false); setMenuId('') }}>删除</button></div>}</div></div>)}{!state?.records.some(row => row.kind === 'goal' && row.payload.state === 'completed') && <p>暂无已完成目标。</p>}<p className={s.subtle}>恢复目标后，已结束的提醒保持结束；需要时重新设置。</p></Dialog>}

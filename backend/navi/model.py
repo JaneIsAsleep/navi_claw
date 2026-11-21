@@ -4,6 +4,8 @@ from typing import Awaitable, Callable
 
 import httpx
 
+from .endpoints import request_url
+
 
 class AgentError(Exception):
     def __init__(self, message: str, retryable: bool = False, code: str = ''):
@@ -29,17 +31,16 @@ class DeepSeek:
     async def chat(self, *, system: str, messages: list[dict], tools: list[dict], config: dict, api_key: str,
                    on_delta: Callable[[str], Awaitable[None]]) -> Reply:
         if not api_key:
-            raise AgentError("请先在设置中配置 DeepSeek API 密钥", code='model_auth_error')
+            raise AgentError("请先在设置中为当前 Endpoint 配置 API 密钥", code='model_auth_error')
         is_messages = config["protocol"] == "messages"
+        url = request_url(config)
         if is_messages:
-            url = "https://api.deepseek.com/anthropic/v1/messages"
             headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01"}
             payload = {"model": config["model"], "system": system, "messages": messages,
                        "max_tokens": int(config["max_output_tokens"]), "stream": True, "thinking": {"type": "disabled"}}
             if tools:
                 payload["tools"] = tools
         else:
-            url = "https://api.deepseek.com/chat/completions"
             headers = {"Authorization": f"Bearer {api_key}"}
             payload = {"model": config["model"], "messages": [{"role": "system", "content": system}, *self.openai_messages(messages)],
                        "max_tokens": int(config["max_output_tokens"]), "stream": True, "stream_options": {"include_usage": True}}
@@ -55,7 +56,7 @@ class DeepSeek:
                 async with client.stream("POST", url, headers=headers, json=payload) as response:
                     if response.status_code != 200:
                         code = response.status_code
-                        guidance = "，请检查密钥或账户余额" if code in {401, 402, 403} else "，请核对模型名称和接口协议" if code in {400, 404} else ""
+                        guidance = "，请检查密钥或账户余额" if code in {401, 402, 403} else "，请核对 Endpoint、模型名称和接口协议" if code in {400, 404} else ""
                         error_code = 'model_rate_limited' if code == 429 else 'model_server_error' if code >= 500 else 'model_auth_error' if code in {401,403} else 'model_balance_error' if code == 402 else 'model_request_error'
                         raise AgentError(f"DeepSeek 返回 HTTP {code}{guidance}", code == 429 or code >= 500, error_code)
                     async for line in response.aiter_lines():

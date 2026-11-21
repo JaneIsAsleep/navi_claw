@@ -2,6 +2,8 @@
 
 本机入口为 [Navi](http://127.0.0.1:8766)。DeepSeek 密钥留在本机，最近实际验证的模型为 `deepseek-flash`，使用 Messages 协议。检查当前服务使用 `status.command`。
 
+网页「设置 → DeepSeek 连接」默认使用官方地址，Messages 为 `https://api.deepseek.com/anthropic/v1/messages`，Chat Completions 为 `https://api.deepseek.com/chat/completions`。在 Endpoint 下拉菜单选「添加 Endpoint…」，按服务商文档填写两条完整 URL。Messages 常见路径是 `/v1/messages`，Chat Completions 常见路径是 `/v1/chat/completions`。Navi 按所选协议直接使用对应 URL，不追加路径。每组两条 URL 共用一个本机密钥，各组密钥独立。选中已保存的配置并保存即可切换，也可复制后修改或确认删除。删除时一并移除该组密钥，删除当前配置会切回官方连接。旧前缀会在启动时迁移成一组按旧规则生成的 URL，迁移后请按服务商文档核对，再用「真实连接检查」验证所选协议。自定义服务会收到模型请求中的相关对话上下文，请仅填写可信地址。
+
 项目根目录为本机克隆的 `navi_claw` 文件夹。Windows/WSL2 的首次安装见 [README](../README.md)。
 
 macOS 双击项目根目录的 `start.command` 启动，Windows/WSL2 在 Ubuntu 终端执行 `./start.command`。看到“已就绪”后可以关闭启动终端，WSL 环境仍须保持运行。关闭浏览器也不会停止后台。普通提醒实际投递到创建对话，封存期间转主对话并标明来源。真正关闭使用同目录的 `stop.command`；`status.command` 可查看状态、入口和日志位置。不要直接打开 `frontend/index.html`。

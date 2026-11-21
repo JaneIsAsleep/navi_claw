@@ -1,6 +1,7 @@
 {
   "model": "deepseek-flash",
   "protocol": "messages",
+  "endpoint_id": "",
   "workflow": "priority_briefing",
   "notification_policy": "daily",
   "timezone": "Asia/Taipei",

@@ -55,3 +55,22 @@ async def test_openai_stream_and_tool_result_translation(monkeypatch):
     messages = [{"role": "assistant", "content": [{"type": "tool_use", "id": "t", "name": "check_updates", "input": {}}]}, {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t", "content": "实际事项"}]}]
     reply = await DeepSeek().chat(system="测试", messages=messages, tools=[], config={**DEFAULTS, "protocol": "chat_completions"}, api_key="test-key", on_delta=delta)
     assert reply.text == "真实协议解析" and reply.input_tokens == 30
+
+
+@pytest.mark.parametrize(("protocol", "expected_url", "header", "expected_key"), [
+    ("messages", "https://messages.example/anthropic/receive/", "x-api-key", "test-key"),
+    ("chat_completions", "https://chat.example/openai/api/generate", "Authorization", "Bearer test-key"),
+])
+async def test_custom_endpoint_controls_request_without_following_redirects(monkeypatch, protocol, expected_url, header, expected_key):
+    original = httpx.AsyncClient
+    seen = []
+    def handle(request):
+        seen.append(str(request.url))
+        assert request.headers[header] == expected_key
+        return httpx.Response(307, headers={"Location": "https://redirect.example/"})
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: original(transport=httpx.MockTransport(handle), **kw))
+    async def delta(value): pass
+    urls = {"messages": "https://messages.example/anthropic/receive/", "chat_completions": "https://chat.example/openai/api/generate"}
+    with pytest.raises(AgentError, match="HTTP 307"):
+        await DeepSeek().chat(system="测试", messages=[], tools=[], config={**DEFAULTS, "protocol": protocol, "endpoint_urls": urls}, api_key="test-key", on_delta=delta)
+    assert seen == [expected_url]
