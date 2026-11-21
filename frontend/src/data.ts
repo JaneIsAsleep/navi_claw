@@ -5,7 +5,7 @@ export type Item = { id: string; kind: string; payload: Payload; created: number
 export type Session = { id: string; title: string; summary?: string; display_abstract: string; goal_setup_json?: string; kind: string; state: string; created: number; updated: number; unread?: number; match_kind?: string; match_message_id?: string; match_excerpt?: string }
 export type Job = { id: string; session_id?: string; task_id?: string; kind: string; status: string; input: string; result: string; error: string; attempt: number; created: number }
 export type Action = { id: string; job_id: string; kind: string; title: string; target: string; body: string; status: string; content_hash: string; basis: string; created: number; source_session_id?: string; source_title?: string; source_state?: string; version: number; delivery_state?: string; delivery_error?: string }
-export type Schedule = { id: string; task_id: string; title: string; instruction: string; kind: string; state: string; interval_seconds: number | null; next_due: number; enabled: number; goal_id?: string; session_id?: string }
+export type Schedule = { id: string; task_id: string; title: string; instruction: string; kind: string; state: string; interval_seconds: number | null; next_due: number; enabled: number; removed_from_reminders?: number; goal_id?: string; session_id?: string }
 export type CheckItem = { id: string; title: string; body?: string; priority: number; done: boolean; due_at?: number | null; source_url?: string }
 export type Protocol = 'messages' | 'chat_completions'
 export type EndpointUrls = Record<Protocol, string>
@@ -21,8 +21,12 @@ export type Editor = { kind: 'memory' | 'goal' | 'task' | 'check' | 'action' | '
 export type Tab = 'activity' | 'approvals' | 'reminders' | 'identity'
 export const labels: Record<string, string> = { pending: '等待处理', running: '进行中', succeeded: '已生成', failed: '失败', cancelled: '已取消', timed_out: '已超时', approved: '已批准，等待执行', rejected: '已拒绝，未执行', delivered: '已投递', invalidated: '已失效，未执行', uncertain: '执行结果待核查', active: '进行中', paused: '已暂停', completed: '已完成', once: '单次提醒', recurring: '周期提醒', heartbeat: '自动检查' }
 export const terminal = (status: string) => ['succeeded', 'failed', 'cancelled', 'timed_out'].includes(status)
-export const time = (value: number) => new Date(value * 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Taipei', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-export const localDate = (value: number) => { const date = new Date(value * 1000); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16) }
+export const browserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+export const time = (value: number, timeZone?: string) => new Date(value * 1000).toLocaleString('zh-CN', { timeZone, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+export const localDate = (value: number, timeZone?: string) => {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(value * 1000).map(({ type, value }) => [type, value]))
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
+}
 export class APIError extends Error {
   constructor(message: string, public status: number) { super(message) }
 }

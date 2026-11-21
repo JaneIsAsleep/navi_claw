@@ -135,13 +135,13 @@ async def test_l02_unrelated_reminder_does_not_inherit_goal_and_completion_is_pr
     goal = reading(g)
     topic = g.session('阅读引导')
     g.db.execute('UPDATE sessions SET goal_setup_json=? WHERE id=?', (packed({'status': 'saved', 'version': 4, 'saved_goal_id': goal['id'], 'followup': 'reminder'}), topic['id']))
-    unrelated = g.chat('明天提醒我交作业', topic['id'])
+    unrelated = g.chat('明天早上八点提醒我交作业', topic['id'])
     config = json.loads(unrelated['config'])
     assert not config.get('goal_id')
     agent = Agent(g)
     first = await agent.call_tool(unrelated, config, 'schedule_task', {'title': '交作业', 'instruction': '交作业', 'kind': 'once', 'next_due': g.clock() + 86400, 'goal_id': goal['id']})
     assert g.require('tasks', first['task_id'])['goal_id'] is None
-    linked = g.chat('明天提醒我推进阅读目标', topic['id'])
+    linked = g.chat('明天早上八点提醒我推进阅读目标', topic['id'])
     second = await agent.call_tool(linked, json.loads(linked['config']), 'schedule_task', {'title': '阅读', 'instruction': '阅读', 'kind': 'once', 'next_due': g.clock() + 86400})
     assert g.require('tasks', second['task_id'])['goal_id'] == goal['id']
     g.goal_state(goal['id'], 'complete')

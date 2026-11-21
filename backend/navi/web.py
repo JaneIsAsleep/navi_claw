@@ -108,6 +108,13 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
     async def edit_session(identity: str, request: Request):
         return gateway.edit_session(identity, await body(request))
 
+    @app.post("/api/sessions/{identity}/reset")
+    async def reset_main_session(identity: str, request: Request):
+        values = await body(request)
+        if values.get("confirmed") is not True:
+            raise ValueError("请确认清空主对话消息")
+        return gateway.reset_main_session(identity)
+
     @app.get("/api/sessions/{identity}/deletion-impact")
     def deletion_impact(identity: str):
         return gateway.deletion_impact(identity)
@@ -129,7 +136,7 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
     @app.post("/api/chat")
     async def chat(request: Request):
         values = await body(request)
-        return gateway.chat(values.get("text"), values.get("session_id"), values.get("kind", "chat"), values.get("references"), values.get("new_session", False))
+        return gateway.chat(values.get("text"), values.get("session_id"), values.get("kind", "chat"), values.get("references"), values.get("new_session", False), timezone=values.get("timezone"))
 
     @app.post("/api/goals/start")
     async def start_goal(request: Request):

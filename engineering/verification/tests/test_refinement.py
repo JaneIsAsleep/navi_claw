@@ -380,7 +380,7 @@ async def test_explicit_tool_request_never_succeeds_with_missing_or_rejected_rec
     job = g.chat("请调用 schedule_task 设置一小时后的报告提醒，提醒我列出三个论点。")
     await g.run_one()
     assert g.require("jobs", job["id"])["status"] == "failed"
-    assert "未完成明确委托" in g.require("jobs", job["id"])["error"]
+    assert ("提醒未保存" if rejected_call else "未完成明确委托") in g.require("jobs", job["id"])["error"]
     assert not g.snapshot()["schedules"]
     assert not [r for r in g.messages(job["session_id"]) if r["role"] == "assistant"]
 
@@ -400,7 +400,6 @@ async def test_proactive_chat_requires_schedule_receipt_on_first_request(g):
     replies = iter([
         Reply([{'type': 'text', 'text': '需要你确认一下再保存。'}]),
         Reply([{'type': 'tool_use', 'id': 'morning', 'name': 'schedule_task', 'input': task}]),
-        Reply([{'type': 'text', 'text': '晨间聊天已安排。'}]),
     ])
 
     class ReluctantModel:
@@ -410,7 +409,7 @@ async def test_proactive_chat_requires_schedule_receipt_on_first_request(g):
     g.model = ReluctantModel()
     job = g.chat('每天8:00主动来找我聊几句。不要使用固定的问候模板。')
     await g.run_one()
-    assert g.require('jobs', job['id'])['result'] == '晨间聊天已安排。'
+    assert '08:00:00' in g.require('jobs', job['id'])['result']
     assert len(g.snapshot()['schedules']) == 1
 
 

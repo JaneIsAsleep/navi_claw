@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { BookOpen, Circle, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react'
-import { type Action, type CheckItem, type Editor, type Item, type State, type Tab, labels, terminal, time } from './data'
+import { browserTimezone, type Action, type CheckItem, type Editor, type Item, type State, type Tab, labels, terminal, time } from './data'
 import { ActionCard } from './ActionCard'
 import { Markdown } from './Markdown'
 import s from './App.module.css'
@@ -16,6 +16,8 @@ const tabs: { key: Tab; label: string }[] = [{ key: 'activity', label: '动态' 
 
 export function AssistantDetails(p: Props) {
   const { state, tab } = p
+  const visibleSchedules = state.schedules.filter(row => !row.removed_from_reminders)
+  const reminderTimezone = browserTimezone() || state.settings.timezone
   useEffect(() => {
     if (p.memory && p.memoryId) {
       const entry = document.getElementById('memory-' + p.memoryId)
@@ -38,9 +40,14 @@ export function AssistantDetails(p: Props) {
       {tab === 'approvals' && <><p className={s.subtle}>先看完整行动与执行目标。批准和实际执行分别记录。</p>{state.actions.map(row => <ActionCard key={row.id} row={row} working={p.working} decide={p.decide} edit={row => p.edit('action', row)} openSource={p.openSession} history={p.history} />)}{!state.actions.length && <p>当前没有需要你决定的动作。</p>}</>}
       {tab === 'reminders' && <>
         <div className={s.sectionTitle}><p>约定何时做什么</p><button className={s.primary} onClick={() => p.edit('task')}><Plus size={16} />设置提醒</button></div>
-        <p className={s.subtle}>这里新建的提醒归属主对话。关闭网页后继续运行，电脑休眠或后台停止期间无法执行。</p>
-        {state.schedules.map(row => <article className={s.row} key={row.id}><div className={s.rowMain}><h3>{row.title}</h3><p>{row.instruction}</p><div className={s.meta}><span>{labels[row.kind]} · {labels[row.state]}</span><span>{row.enabled ? '下次 ' + time(row.next_due) : '未来触发已停止'}</span></div><p className={s.subtle}>{row.session_id ? '归属：' + (state.sessions.find(s => s.id === row.session_id)?.title || '已封存话题，期间转发主对话') : '暂无关联对话'}</p><div className={s.rowActions}>{row.state !== 'cancelled' && row.state !== 'completed' && <><button className={s.textButton} onClick={() => p.act('/schedules/' + row.id, 'PATCH', { operation: row.enabled ? 'pause' : 'resume' })}>{row.enabled ? <Pause size={16} /> : <Play size={16} />}{row.enabled ? '暂停' : '恢复'}</button><button className={s.textButton} onClick={() => p.edit('task', row)}>修改时间</button><button className={s.textButton} onClick={() => p.act('/schedules/' + row.id, 'PATCH', { operation: 'cancel' }, '已取消，未来不再触发')}>取消提醒</button></>}<button className={s.textButton} onClick={() => p.history('/schedules/' + row.id + '/history')}>历史与失败</button>{row.session_id && <button className={s.textButton} onClick={() => p.openSession(row.session_id!)}>查看归属</button>}</div>{row.kind === 'heartbeat' && <details><summary>自动检查详情</summary><p>Heartbeat 每 {Number(row.interval_seconds) / 60} 分钟检查一次，仅在实际筛选结果变化时提醒。</p></details>}</div></article>)}
-        {!state.schedules.length && <p>还没有安排提醒，可以从一句“何时提醒我做什么”开始。</p>}
+        <p className={s.subtle}>显示时区：{reminderTimezone}。这里新建的提醒归属主对话。关闭网页后继续运行，电脑休眠或后台停止期间无法执行。</p>
+        {visibleSchedules.map(row => <article className={s.row} key={row.id}><div className={s.rowMain}><h3>{row.title}</h3><p>{row.instruction}</p><div className={s.meta}><span>{labels[row.kind]} · {labels[row.state]}</span><span>{row.enabled ? '下次 ' + time(row.next_due, reminderTimezone) : '未来触发已停止'}</span></div><p className={s.subtle}>{row.session_id ? '归属：' + (state.sessions.find(s => s.id === row.session_id)?.title || '已封存话题，期间转发主对话') : '暂无关联对话'}</p><div className={s.rowActions}>{row.state !== 'cancelled' && row.state !== 'completed' && <><button className={s.textButton} onClick={() => p.act('/schedules/' + row.id, 'PATCH', { operation: row.enabled ? 'pause' : 'resume' })}>{row.enabled ? <Pause size={16} /> : <Play size={16} />}{row.enabled ? '暂停' : '恢复'}</button><button className={s.textButton} onClick={() => p.edit('task', row)}>修改时间</button><button className={s.textButton} onClick={() => p.act('/schedules/' + row.id, 'PATCH', { operation: 'cancel' }, '已取消，未来不再触发')}>取消提醒</button></>}{!row.enabled && (row.state === 'cancelled' || row.state === 'completed') && <button
+          className={s.textButton}
+          disabled={p.working}
+          onClick={() => p.act('/schedules/' + row.id, 'PATCH', { operation: 'remove_from_list' }, '已从提醒列表移除')}
+        ><Trash2 size={16} />从列表移除</button>}
+        <button className={s.textButton} onClick={() => p.history('/schedules/' + row.id + '/history')}>历史与失败</button>{row.session_id && <button className={s.textButton} onClick={() => p.openSession(row.session_id!)}>查看归属</button>}</div>{row.kind === 'heartbeat' && <details><summary>自动检查详情</summary><p>Heartbeat 每 {Number(row.interval_seconds) / 60} 分钟检查一次，仅在实际筛选结果变化时提醒。</p></details>}</div></article>)}
+        {!visibleSchedules.length && <p>还没有安排提醒，可以从一句“何时提醒我做什么”开始。</p>}
         <div className={s.sectionTitle}><h3>关注事项</h3><button className={s.textButton} onClick={() => p.edit('check')}><Plus size={16} />添加事项</button></div>
         <p className={s.subtle}>截止日期表示事项期限。保存事项不会自动安排提醒。</p>
         {state.check_items.map(row => <article className={s.row} key={row.id}><button className={s.iconButton} aria-label={(row.done ? '重新打开' : '完成') + row.title} onClick={() => p.act('/check-items', 'PUT', state.check_items.map(item => item.id === row.id ? { ...item, done: !item.done } : item))}><Circle size={18} fill={row.done ? 'currentColor' : 'none'} /></button><div className={s.rowMain}><h3>{row.title}</h3><p>{row.body}</p><div className={s.meta}>{row.due_at ? '截止 ' + time(row.due_at) : '未设截止日期'}{row.done && ' · 已完成'}</div></div><button className={s.iconButton} aria-label={'编辑事项 ' + row.title} onClick={() => p.edit('check', row)}><Pencil size={16} /></button><button className={s.iconButton} aria-label={'删除事项 ' + row.title} onClick={() => p.remove(row)}><Trash2 size={16} /></button></article>)}

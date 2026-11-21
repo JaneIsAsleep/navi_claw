@@ -57,6 +57,7 @@ class Database:
                 "sessions": {"kind": "TEXT NOT NULL DEFAULT 'secondary'", "state": "TEXT NOT NULL DEFAULT 'active'", "title_manual": "INTEGER NOT NULL DEFAULT 0"},
                 "messages": {"references_json": "TEXT NOT NULL DEFAULT '[]'", "outbox_id": "TEXT", "origin_session_id": "TEXT", "unread": "INTEGER NOT NULL DEFAULT 0"},
                 "actions": {"source_session_id": "TEXT", "version": "INTEGER NOT NULL DEFAULT 1"},
+                "schedules": {"calendar_timezone": "TEXT", "removed_from_reminders": "INTEGER NOT NULL DEFAULT 0"},
             }
             for table, fields in migrations.items():
                 existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}

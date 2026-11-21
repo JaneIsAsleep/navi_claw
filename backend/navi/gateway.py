@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from .config import Settings
 from .feeds import PublicFeeds
 from .model import AgentError, DeepSeek
+from .reminder_time import calendar_occurrences, finite_number, has_time_reply, local_timestamp, timezone_for
 from .skills import BriefingSkills
 from .storage import Database, packed, uid
 
@@ -215,6 +216,28 @@ class Gateway:
             conn.execute("INSERT INTO audit(kind,data,created) VALUES('session.updated',?,?)", (packed({"session_id": identity, "operation": operation or "rename"}), now))
         return self.require("sessions", identity)
 
+    def reset_main_session(self, identity):
+        now = self.clock()
+        with self.db.transaction() as conn:
+            session = conn.execute("SELECT kind FROM sessions WHERE id=?", (identity,)).fetchone()
+            if not session or session["kind"] != "main":
+                raise ValueError("只能重置主对话")
+            if conn.execute(
+                "SELECT 1 FROM jobs WHERE session_id=? AND status IN ('pending','running') LIMIT 1",
+                (identity,),
+            ).fetchone():
+                raise APIError("主对话仍有工作在处理，请等它结束或停止当前工作后再重置")
+            removed = conn.execute("DELETE FROM messages WHERE session_id=?", (identity,)).rowcount
+            conn.execute(
+                "UPDATE sessions SET summary='',summary_through=NULL,display_abstract='',goal_setup_json='{}',updated=? WHERE id=?",
+                (now, identity),
+            )
+            conn.execute(
+                "INSERT INTO audit(kind,data,created) VALUES('session.reset',?,?)",
+                (packed({"session_id": identity, "message_count": removed}), now),
+            )
+        return self.require("sessions", identity)
+
     def deletion_impact(self, identity):
         row = self.require("sessions", identity)
         if row["kind"] == "main":
@@ -306,11 +329,13 @@ class Gateway:
         conn.execute("INSERT INTO audit(job_id,kind,data,created) VALUES(?,'job.queued',?,?)", (identity, packed({"task_id": task_id, "session_id": session_id, "trigger_key": trigger_key or f"manual:{identity}"}), now))
         return identity
 
-    def chat(self, text, session_id=None, kind="chat", references=None, new_session=False):
+    def chat(self, text, session_id=None, kind="chat", references=None, new_session=False, timezone=None):
         if not isinstance(text, str) or not text.strip() or len(text) > 20000:
             raise ValueError("消息长度应为 1 至 20000 个字符")
         if kind not in {"chat", "ideas", "draft", "compact", "connection"}:
             raise ValueError("无效的作业类型")
+        if timezone is not None:
+            timezone_for(timezone)
         references = references or []
         if not isinstance(references, list) or len(references) > 5:
             raise ValueError("最多引用 5 项内容")
@@ -348,8 +373,10 @@ class Gateway:
                 conn.execute("UPDATE sessions SET goal_setup_json=? WHERE id=?", (packed(setup), session_id))
                 kind = "goal_setup"
             config = self.job_config()
+            if timezone is not None:
+                config["timezone"] = timezone
             previous = conn.execute("SELECT m.role,j.input,j.config,j.status,j.id FROM messages m LEFT JOIN jobs j ON j.id=m.job_id WHERE m.session_id=? ORDER BY m.created DESC,m.rowid DESC LIMIT 1", (session_id,)).fetchone()
-            time_reply = bool(re.fullmatch(r'[每明后天周星期早上午下晚间中午零一二三四五六七八九十点时分秒0-9 :：，,。]+', text.strip()))
+            time_reply = has_time_reply(text)
             if (setup.get('followup') == 'reminder' and setup.get('followup_version') == setup.get('version') and time_reply
                     and previous and previous['role'] == 'assistant' and previous['status'] == 'succeeded'
                     and '先问我提醒时间' in (previous['input'] or '')
@@ -426,15 +453,18 @@ class Gateway:
         title, instruction = values.get("title", ""), values.get("instruction", "")
         kind = values.get("kind", "recurring")
         interval = values.get("interval_seconds", 3600)
-        due = values.get("next_due", self.clock() + float(interval))
         if kind not in {"once", "recurring", "heartbeat"} or not isinstance(title, str) or not title.strip() or not isinstance(instruction, str) or not instruction.strip():
             raise ValueError("请填写任务标题、指令和有效类型")
         if len(title) > 300 or len(instruction) > 20000:
             raise ValueError("任务内容过长")
-        if not isinstance(due, (int, float)) or not math.isfinite(due):
-            raise ValueError("到期时间无效")
-        if kind != "once" and (not isinstance(interval, (int, float)) or not math.isfinite(interval) or interval < 1):
+        if (kind != "once" or "next_due" not in values) and (not finite_number(interval) or interval < 1):
             raise ValueError("周期至少为 1 秒")
+        due = self.schedule_due(values, self.clock() + interval if finite_number(interval) else self.clock())
+        calendar_timezone = values.get("calendar_timezone")
+        if calendar_timezone is not None:
+            if kind == "once" or interval not in (86400, 604800):
+                raise ValueError("日历提醒需按天或按周重复")
+            timezone_for(calendar_timezone)
         session_id = values.get("session_id") or self.main_session()["id"]
         if values.get("goal_id"):
             goal = self.require("records", values["goal_id"])
@@ -454,16 +484,43 @@ class Gateway:
             if not session or session["state"] != "active":
                 raise ValueError("提醒归属对话不可用，请先解封")
             conn.execute("INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)", (task_id, title, instruction, kind, "active", session_id, values.get("goal_id"), now, now))
-            conn.execute("INSERT INTO schedules(id,task_id,kind,interval_seconds,next_due,created,updated) VALUES(?,?,?,?,?,?,?)", (identity, task_id, kind, interval if kind != "once" else None, due, now, now))
+            conn.execute("INSERT INTO schedules(id,task_id,kind,interval_seconds,next_due,created,updated,calendar_timezone) VALUES(?,?,?,?,?,?,?,?)", (identity, task_id, kind, interval if kind != "once" else None, due, now, now, calendar_timezone))
         self.db.event("schedule.created", {"schedule_id": identity, "task_id": task_id, "kind": kind}, now=now)
         return self.require("schedules", identity)
+
+    def schedule_due(self, values, default):
+        if "local_due" in values:
+            if "next_due" in values:
+                raise ValueError("请只填写一种提醒时间")
+            due = local_timestamp(values["local_due"], timezone_for(values.get("timezone")))
+            if due <= self.clock():
+                raise ValueError("提醒时间已过，请选择未来的时间")
+        else:
+            due = values.get("next_due", default)
+        if not finite_number(due):
+            raise ValueError("到期时间无效")
+        return due
 
     def edit_schedule(self, identity, values):
         row, now = self.require("schedules", identity), self.clock()
         task = self.require("tasks", row["task_id"])
+        if values == {"operation": "remove_from_list"}:
+            if task["state"] not in {"cancelled", "completed"} or row["enabled"]:
+                raise ValueError("请先取消提醒，再从列表移除")
+            with self.db.transaction() as conn:
+                removed = conn.execute(
+                    "UPDATE schedules SET removed_from_reminders=1 WHERE id=? AND removed_from_reminders=0",
+                    (identity,),
+                )
+                if removed.rowcount:
+                    conn.execute(
+                        "INSERT INTO audit(kind,data,created) VALUES('schedule.removed_from_list',?,?)",
+                        (packed({"schedule_id": identity, "task_id": row["task_id"]}), now),
+                    )
+            return self.require("schedules", identity)
         if task["state"] in {"cancelled", "completed"}:
             raise ValueError("已结束的任务不能恢复")
-        if set(values) - {"title", "instruction", "interval_seconds", "next_due", "operation"}:
+        if set(values) - {"title", "instruction", "interval_seconds", "next_due", "local_due", "timezone", "operation"}:
             raise ValueError("不支持的任务字段")
         operation = values.get("operation")
         if operation and operation not in {"pause", "resume", "cancel", "complete"}:
@@ -474,11 +531,14 @@ class Gateway:
             self.stop_executions(ids)
             return self.require("schedules", identity)
         interval = values.get("interval_seconds", row["interval_seconds"])
-        due = values.get("next_due", now + interval if operation == "resume" and interval else max(row["next_due"], now + 1) if operation == "resume" else row["next_due"])
-        if row["kind"] != "once" and (not isinstance(interval, (int, float)) or not math.isfinite(interval) or interval < 1):
+        if row["kind"] != "once" and (not finite_number(interval) or interval < 1):
             raise ValueError("周期至少为 1 秒")
-        if not isinstance(due, (int, float)) or not math.isfinite(due):
-            raise ValueError("到期时间无效")
+        due = self.schedule_due(values, now + interval if operation == "resume" and interval else max(row["next_due"], now + 1) if operation == "resume" else row["next_due"])
+        calendar_timezone = row["calendar_timezone"] if interval == row["interval_seconds"] else None
+        if calendar_timezone and operation == "resume" and not ({"local_due", "next_due"} & values.keys()):
+            due = row["next_due"]
+            if due <= now:
+                _, _, due = calendar_occurrences(due, interval, timezone_for(calendar_timezone), now)
         title, instruction = values.get("title", task["title"]), values.get("instruction", task["instruction"])
         if not isinstance(title, str) or not title.strip() or len(title) > 300 or not isinstance(instruction, str) or not instruction.strip() or len(instruction) > 20000:
             raise ValueError("任务标题或指令无效")
@@ -486,7 +546,7 @@ class Gateway:
         enabled = int(state == "active")
         with self.db.transaction() as conn:
             conn.execute("UPDATE tasks SET title=?,instruction=?,state=?,updated=? WHERE id=?", (title, instruction, state, now, row["task_id"]))
-            conn.execute("UPDATE schedules SET interval_seconds=?,next_due=?,enabled=?,updated=? WHERE id=?", (interval, due, enabled, now, identity))
+            conn.execute("UPDATE schedules SET interval_seconds=?,next_due=?,enabled=?,updated=?,calendar_timezone=? WHERE id=?", (interval, due, enabled, now, calendar_timezone, identity))
         self.db.event("schedule.updated", {"schedule_id": identity, "task_id": row["task_id"], "operation": operation or "edit", "future_only": True}, now=now)
         return self.require("schedules", identity)
 
@@ -747,12 +807,15 @@ class Gateway:
                 interval = row["interval_seconds"]
                 missed = int((now - row["next_due"]) // interval) if interval else 0
                 latest_due = row["next_due"] + missed * interval if interval else row["next_due"]
+                next_due = latest_due + interval if interval else latest_due
+                if row["calendar_timezone"]:
+                    latest_due, missed, next_due = calendar_occurrences(row["next_due"], interval, timezone_for(row["calendar_timezone"]), now)
                 trigger = f"schedule:{row['id']}:{latest_due:.6f}"
                 try:
                     identity = self.insert_job(conn, kind=row["kind"], text=row["instruction"], task_id=row["task_id"], session_id=row["session_id"], trigger_key=trigger, now=now)
                 except sqlite3.IntegrityError:
                     identity = None
-                conn.execute("UPDATE schedules SET next_due=?,enabled=?,updated=? WHERE id=?", (latest_due + interval if interval else latest_due, int(bool(interval)), now, row["id"]))
+                conn.execute("UPDATE schedules SET next_due=?,enabled=?,updated=? WHERE id=?", (next_due, int(bool(interval)), now, row["id"]))
                 conn.execute("INSERT INTO audit(job_id,kind,data,created) VALUES(?,'schedule.triggered',?,?)", (identity, packed({"schedule_id": row["id"], "due": latest_due, "missed_intervals": missed, "missed_from": row["next_due"] if missed else None}), now))
 
     def publish_content(self, conn, job, result, now):

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowUp, BookOpen, Check, ChevronRight, ChevronLeft, Heart, Users, Wallet, Briefcase, Palette, Zap, Copy, Download, FileText, Flag, Lightbulb, Menu, MessageCircle, MoreHorizontal, Plus, Radio, Search, Settings, Square, X } from 'lucide-react'
-import { api, labels, localDate, terminal, time, type Action, type CheckItem, type Config, type FeedImage, type GoalSetup, type GoalCard, type Detail, type Editor, type Item, type Job, type Message, type Reference, type Schedule, type Session, type State, type Tab } from './data'
+import { api, browserTimezone, labels, localDate, terminal, time, type Action, type CheckItem, type Config, type FeedImage, type GoalSetup, type GoalCard, type Detail, type Editor, type Item, type Job, type Message, type Reference, type Schedule, type Session, type State, type Tab } from './data'
 import type { EndpointProfile, EndpointUrls, Protocol } from './data'
 import { Dialog } from './Dialog'
 import { SearchDialog } from './SearchDialog'
@@ -72,6 +72,7 @@ export default function App() {
   const [detail, setDetail] = useState<Detail | null>(null)
   const [audit, setAudit] = useState<unknown>(null)
   const [menuId, setMenuId] = useState('')
+  const [mainReset, setMainReset] = useState<Session | null>(null)
   const [deletion, setDeletion] = useState<{ session?: Session; reminders?: { id: string; title: string; kind: string }[]; item?: Item; check?: CheckItem } | null>(null)
   const [config, setConfig] = useState<Config | null>(null)
   const [apiKey, setApiKey] = useState('')
@@ -103,7 +104,7 @@ export default function App() {
   const busy = state?.jobs.find(job => job.session_id === sessionId && !terminal(job.status) && ['chat', 'ideas', 'draft', 'compact', 'connection', 'goal_setup', 'goal_save'].includes(job.kind))
   const pending = state?.actions.filter(row => row.status === 'pending').length || 0
   const modalOpen = Boolean(editor || deletion || audit)
-  const overlayOpen = modalOpen || searchOpen || !!idea || sourcesOpen || completedOpen || !!goalCategory || !!feedImage || !!endpointToDelete
+  const overlayOpen = modalOpen || searchOpen || !!idea || sourcesOpen || completedOpen || !!goalCategory || !!feedImage || !!endpointToDelete || !!mainReset
 
   function saveDraft(text: string, refs = references, kind = composerKind) {
     setInput(text); setReferences(refs); setComposerKind(kind)
@@ -245,6 +246,18 @@ export default function App() {
   }
   function actPath(path: string, method: string, data: unknown, message = '') { void act(async () => { await api(path, method, data); if (detail && path === '/records/' + detail.id) setDetail(await api<Detail>(path)) }, message) }
   function capture() { trigger.current = menuId ? menuTrigger.current : interaction.current || document.activeElement as HTMLElement }
+  async function resetMainSession(row: Session) {
+    await act(async () => {
+      const reset = await api<Session>('/sessions/' + row.id + '/reset', 'POST', { confirmed: true })
+      localStorage.removeItem('navi-draft-' + row.id)
+      if (feedReply?.session === row.id) setFeedReply(null)
+      if (row.id === sessionId && chatRef.current) chatRef.current.scrollTop = 0
+      chooseSession(reset)
+      delete positions.current['chat-' + row.id]
+      localStorage.setItem('navi-reading-positions', JSON.stringify(positions.current))
+      setMainReset(null)
+    }, '主对话已重置。')
+  }
   function closeModal() { if (working && deletion) return; setEditor(null); setDeletion(null); setAudit(null); setError('') }
   function showAssistant(next = 'activity' as Tab, showMemory = false, id = '') {
     assistantTrigger.current = interaction.current || document.activeElement as HTMLElement
@@ -259,7 +272,7 @@ export default function App() {
   async function submit(text = input, kind = composerKind) {
     if (!text.trim() || working || busy || archived) return
     await act(async () => {
-      const row = await api<Job>('/chat', 'POST', { text, session_id: sessionId || undefined, kind, references, new_session: !sessionId })
+      const row = await api<Job>('/chat', 'POST', { text, session_id: sessionId || undefined, kind, references, new_session: !sessionId, timezone: browserTimezone() })
       localStorage.removeItem('navi-draft-' + (sessionId || 'new')); localStorage.setItem('navi-draft-active', 'false'); localStorage.setItem('navi-session', row.session_id!)
       setSessionId(row.session_id!); setInput(''); setReferences([]); setFeedReply(null); setComposerKind('chat'); if (!paired) { setPage('chat'); location.hash = 'chat' }
       positions.current['chat-' + row.session_id] = Number.MAX_SAFE_INTEGER
@@ -327,7 +340,10 @@ export default function App() {
     const data = row && 'payload' in row ? row.payload : row || {}
     const values: Record<string, string> = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value ?? '')]))
     if (!row) Object.assign(values, { title: '', body: '', next_step: '', state: 'active' })
-    if (kind === 'task') Object.assign(values, { kind: row ? (row as Schedule).kind : 'once', instruction: row ? (row as Schedule).instruction : '', minutes: String(row ? ((row as Schedule).interval_seconds || 3600) / 60 : 60), next_due: localDate(row ? (row as Schedule).next_due : Date.now() / 1000 + 3600), goal_id: row ? (row as Schedule).goal_id || '' : '' })
+    if (kind === 'task') {
+      const timezone = browserTimezone() || state?.settings.timezone || 'UTC'
+      Object.assign(values, { kind: row ? (row as Schedule).kind : 'once', instruction: row ? (row as Schedule).instruction : '', minutes: String(row ? ((row as Schedule).interval_seconds || 3600) / 60 : 60), next_due: localDate(row ? (row as Schedule).next_due : Date.now() / 1000 + 3600, timezone), timezone, goal_id: row ? (row as Schedule).goal_id || '' : '' })
+    }
     if (kind === 'check') Object.assign(values, { priority: String((row as CheckItem | undefined)?.priority || 2), due_at: (row as CheckItem | undefined)?.due_at ? localDate((row as CheckItem).due_at!) : '' })
     if (kind === 'brief') values.body = state?.feed_brief || ''
     setEditor({ kind, id: row?.id, values })
@@ -342,7 +358,7 @@ export default function App() {
       } else if (current.kind === 'brief') { await api('/settings', 'PUT', { feed_brief: v.body }); setConfig(c => c ? { ...c, feed_brief: v.body } : c) }
       else if (current.kind === 'source') await api('/feed-sources', 'POST', { source_id: v.source_id || state.feed_catalog[0]?.id })
       else if (current.kind === 'task') {
-        const fields = { title: v.title, instruction: v.instruction, interval_seconds: Number(v.minutes) * 60, next_due: new Date(v.next_due).getTime() / 1000 }
+        const fields = { title: v.title, instruction: v.instruction, ...(v.kind !== 'once' ? { interval_seconds: Number(v.minutes) * 60 } : {}), local_due: v.next_due, timezone: v.timezone }
         await api(current.id ? '/schedules/' + current.id : '/schedules', current.id ? 'PATCH' : 'POST', current.id ? fields : { ...fields, kind: v.kind, session_id: state.main_session_id, goal_id: v.goal_id || undefined })
       } else if (current.kind === 'check') {
         const item: CheckItem = { id: current.id || crypto.randomUUID(), title: v.title, body: v.body, priority: Number(v.priority), due_at: v.due_at ? new Date(v.due_at).getTime() / 1000 : null, source_url: v.source_url, done: v.done === 'true' }
@@ -440,8 +456,12 @@ export default function App() {
       <div className={s.sessionHeader}><span>对话</span><button className={s.iconButton} aria-label="新副对话" onClick={newChat}><Plus size={20} /></button></div>
       <div className={s.sessionRows}>{state?.sessions.map(row => <div key={row.id} className={s.sessionRow + (row.id === sessionId ? ' ' + s.sessionSelected : '')}>
         <button className={s.sessionTitle} onClick={() => chooseSession(row)}><span title={row.title}>{row.title}</span><small>{row.kind === 'main' ? '日常空间' : time(row.updated)}{Boolean(row.unread) && ' · 未读 ' + row.unread}</small></button>
-        {row.kind !== 'main' && <button className={s.sessionMore} aria-label={'管理对话 ' + row.title} aria-expanded={menuId === row.id} onClick={event => { menuTrigger.current = event.currentTarget; setMenuId(menuId === row.id ? '' : row.id) }}><MoreHorizontal size={18} /></button>}
-        {menuId === row.id && <div className={s.sessionMenu} aria-label={'对话操作 ' + row.title}><button onClick={() => { edit('session', row); setMenuId('') }}>重命名</button><button onClick={() => void act(async () => { await api('/sessions/' + row.id, 'PATCH', { operation: 'archive' }); setMenuId(''); if (row.id === sessionId) chooseSession(state!.sessions.find(r => r.id === state!.main_session_id)!) }, '话题已封存，期间提醒转发主对话。')}>封存</button><button className={s.dangerText} onClick={() => void removeSession(row)}>删除</button></div>}
+        <button className={s.sessionMore} aria-label={'管理对话 ' + row.title} aria-expanded={menuId === row.id} onClick={event => { menuTrigger.current = event.currentTarget; setMenuId(menuId === row.id ? '' : row.id) }}><MoreHorizontal size={18} /></button>
+        {menuId === row.id && <div className={s.sessionMenu} aria-label={'对话操作 ' + row.title}>
+          {row.kind === 'main' ? <button className={s.dangerText} onClick={() => { capture(); setMenuId(''); setError(''); setMainReset(row) }}>重置主对话</button> : <>
+            <button onClick={() => { edit('session', row); setMenuId('') }}>重命名</button><button onClick={() => void act(async () => { await api('/sessions/' + row.id, 'PATCH', { operation: 'archive' }); setMenuId(''); if (row.id === sessionId) chooseSession(state!.sessions.find(r => r.id === state!.main_session_id)!) }, '话题已封存，期间提醒转发主对话。')}>封存</button><button className={s.dangerText} onClick={() => void removeSession(row)}>删除</button>
+          </>}
+        </div>}
       </div>)}</div>
       <button className={s.textButton} onClick={() => navigate('search')}><Search size={16} />搜索话题</button><p className={s.sessionFoot}>保存在你的本机</p>
     </aside>}
@@ -502,7 +522,7 @@ export default function App() {
             <label>API 密钥<input type="password" autoComplete="new-password" placeholder="留空保留该配置已有的密钥" value={apiKey} onChange={event => setApiKey(event.target.value)} /></label>
             <p className={s.subtle}>{!addingEndpoint && config.endpoint_id === state?.settings.endpoint_id && state.settings.api_key_configured ? '此配置的密钥已保存在本机，不回显。' : '每组配置独立保存密钥，两条 URL 共用该密钥。请仅填写你信任的服务地址。'}</p>
             <div className={s.rowActions}><button type="submit" className={s.primary} disabled={working}>保存设置</button><button type="button" className={s.secondary} disabled={working || !!connectionJob || !state?.settings.api_key_configured || addingEndpoint || !!apiKey.trim() || config.endpoint_id !== state.settings.endpoint_id || config.protocol !== state.settings.protocol || config.model !== state.settings.model} onClick={() => void act(async () => { const job = await api<Job>('/settings/check', 'POST', {}); setConnectionJob(job.id); setNotice('正在进行真实检查') })}>真实连接检查</button></div>
-            <h2>提醒与授权</h2><label>普通站内提醒<select value={config.notification_policy} onChange={event => setConfig({ ...config, notification_policy: event.target.value })}><option value="daily">日常：按已有授权自动发送</option><option value="strict">严格：每条提醒人工审批</option></select></label><p className={s.subtle}>导出文件始终先审批。未批准内容不会进入 Outbox。</p><label>时区<input value={config.timezone} onChange={event => setConfig({ ...config, timezone: event.target.value })} /></label>
+            <h2>提醒与授权</h2><label>普通站内提醒<select value={config.notification_policy} onChange={event => setConfig({ ...config, notification_policy: event.target.value })}><option value="daily">日常：按已有授权自动发送</option><option value="strict">严格：每条提醒人工审批</option></select></label><p className={s.subtle}>导出文件始终先审批。未批准内容不会进入 Outbox。</p><p className={s.subtle}>网页提醒时区：{browserTimezone() || config.timezone}（{browserTimezone() ? '浏览器' : '备用设置'}）</p><label>命令行、后台和网页备用时区<input value={config.timezone} onChange={event => setConfig({ ...config, timezone: event.target.value })} /></label>
             <h2>隐私与运行</h2><p>模型调用会将本次有效会话、摘要、记忆、目标和引用资料发给配置的模型服务。停用记忆影响以后的调用。</p><p>双击 start.command 启动，启动终端与浏览器可以关闭。真正停止使用 stop.command。电脑休眠期间无法实时执行，恢复后每个调度最多补做一次。</p>
             {state && <><h2>今日使用</h2><p>{state.usage.requests} 次请求 · {state.usage.input_tokens + state.usage.output_tokens} tokens</p><p className={s.subtle}>{state.usage.cost_configured ? '按当前费率粗估 ' + state.usage.estimated_cost.toFixed(4) + ' ' + state.usage.currency : '尚未配置费率，以服务商账单为准。'}</p></>}
             <details className={s.advanced}><summary>预算与调用限制</summary><p className={s.subtle}>每日上限设为 0 时不设置本地日累计上限；每个作业的调用次数和执行期限仍有限制。</p><div className={s.fieldPair}>{[['request_timeout', '请求超时，秒'], ['job_timeout', '作业期限，秒'], ['max_model_calls', '单作业模型调用次数'], ['max_tool_calls', '单作业工具调用次数'], ['max_output_tokens', '输出 token 上限'], ['daily_requests', '每日请求上限'], ['daily_tokens', '每日 token 上限'], ['input_price_per_million', '每百万输入 token 费率'], ['output_price_per_million', '每百万输出 token 费率']].map(([key, label]) => <label key={key}>{label}<input type="number" min={key.includes('price') || key.startsWith('daily_') ? 0 : 1} step="any" value={Number(config[key])} onChange={event => setConfig({ ...config, [key]: Number(event.target.value) })} /></label>)}</div></details>
@@ -512,6 +532,15 @@ export default function App() {
       </section>}
       {state && <FeedPanel snapshot={state.records.filter(row => row.kind === 'feed' && row.payload.origin === 'generated')} header={contentHeader} active={page === 'feed' && !detail} layoutKey={String(feedChatVisible) + pairedView} scrollRef={feedRef} initialTop={positions.current.feed || 0} position={top => { positions.current.feed = top; localStorage.setItem('navi-reading-positions', JSON.stringify(positions.current)) }} discuss={discussFeed} detail={row => void openRecord(row)} showImage={(image, node) => { feedImageTrigger.current = node; setFeedImage(image) }} />}
     </main>
+    {mainReset && <Dialog title="重置主对话" trigger={trigger.current} cancelFirst close={() => { if (!working) { setMainReset(null); setError('') } }}>
+      <p>主对话的消息、摘要和当前浏览器中的草稿会被清空，无法从对话恢复。</p>
+      <p>主对话、其他对话、记忆、目标、提醒、成果和执行记录会保留。已有提醒仍会按原计划投递。</p>
+      {error && <p role="alert" className={s.failureText}>{error}</p>}
+      <div className={s.rowActions}>
+        <button data-cancel className={s.secondary} disabled={working} onClick={() => { setMainReset(null); setError('') }}>取消</button>
+        <button className={s.danger} disabled={working} onClick={() => void resetMainSession(mainReset)}>确认重置</button>
+      </div>
+    </Dialog>}
     {endpointToDelete && <Dialog title="删除 Endpoint" trigger={endpointSelect.current} cancelFirst close={() => { if (!working) { setEndpointToDelete(null); setError('') } }}>
       <p>将删除这组地址和它保存的本机密钥。如果它正在使用，Navi 会切回 DeepSeek 官方默认连接。</p>
       <p className={s.endpointAddress}>Messages：{endpointToDelete.urls.messages}<br />Chat Completions：{endpointToDelete.urls.chat_completions}</p>
@@ -545,7 +574,7 @@ export default function App() {
         {!['source', 'session'].includes(editor.kind) && <label>{editor.kind === 'brief' ? '以后想持续了解什么' : editor.kind === 'task' ? '到时提醒什么' : '内容'}<textarea data-first={editor.kind === 'brief' || undefined} rows={5} required={editor.kind === 'task' || editor.kind === 'action'} maxLength={editor.kind === 'brief' ? 2000 : 20000} value={editor.values[editor.kind === 'task' ? 'instruction' : 'body'] || ''} onChange={event => setEditor({ ...editor, values: { ...editor.values, [editor.kind === 'task' ? 'instruction' : 'body']: event.target.value } })} /></label>}
         {editor.kind === 'brief' && <p className={s.subtle}>只影响以后生成的内容，旧帖子保持原样。</p>}
         {editor.kind === 'goal' && <><label>下一步<input value={editor.values.next_step || ''} onChange={event => setEditor({ ...editor, values: { ...editor.values, next_step: event.target.value } })} /></label><label>状态<select value={editor.values.state} onChange={event => setEditor({ ...editor, values: { ...editor.values, state: event.target.value } })}><option value="active">进行中</option><option value="paused">已暂停</option><option value="completed">已完成</option></select></label><p className={s.subtle}>完成目标会结束精确关联的追踪与提醒。</p></>}
-        {editor.kind === 'task' && <>{!editor.id && <label>提醒方式<select value={editor.values.kind} onChange={event => setEditor({ ...editor, values: { ...editor.values, kind: event.target.value } })}><option value="once">单次</option><option value="recurring">周期</option><option value="heartbeat">自动检查</option></select></label>}<div className={s.fieldPair}>{editor.values.kind !== 'once' && <label>间隔，分钟<input type="number" min={1 / 60} step="any" required value={editor.values.minutes} onChange={event => setEditor({ ...editor, values: { ...editor.values, minutes: event.target.value } })} /></label>}<label>首次或下次时间<input type="datetime-local" required value={editor.values.next_due} onChange={event => setEditor({ ...editor, values: { ...editor.values, next_due: event.target.value } })} /></label></div>{!editor.id && <><p>归属：主对话</p><label>关联目标，可留空<select value={editor.values.goal_id} onChange={event => setEditor({ ...editor, values: { ...editor.values, goal_id: event.target.value } })}><option value="">不关联</option>{state?.records.filter(row => row.kind === 'goal').map(row => <option key={row.id} value={row.id}>{row.payload.title}</option>)}</select></label></>}</>}
+        {editor.kind === 'task' && <>{!editor.id && <label>提醒方式<select value={editor.values.kind} onChange={event => setEditor({ ...editor, values: { ...editor.values, kind: event.target.value } })}><option value="once">单次</option><option value="recurring">周期</option><option value="heartbeat">自动检查</option></select></label>}<div className={s.fieldPair}>{editor.values.kind !== 'once' && <label>间隔，分钟<input type="number" min={1 / 60} step="any" required value={editor.values.minutes} onChange={event => setEditor({ ...editor, values: { ...editor.values, minutes: event.target.value } })} /></label>}<label>首次或下次时间（{editor.values.timezone}）<input type="datetime-local" required value={editor.values.next_due} onChange={event => setEditor({ ...editor, values: { ...editor.values, next_due: event.target.value } })} /></label></div>{!editor.id && <><p>归属：主对话</p><label>关联目标，可留空<select value={editor.values.goal_id} onChange={event => setEditor({ ...editor, values: { ...editor.values, goal_id: event.target.value } })}><option value="">不关联</option>{state?.records.filter(row => row.kind === 'goal').map(row => <option key={row.id} value={row.id}>{row.payload.title}</option>)}</select></label></>}</>}
         {editor.kind === 'check' && <><label>重要程度<input type="number" min={1} max={3} required value={editor.values.priority} onChange={event => setEditor({ ...editor, values: { ...editor.values, priority: event.target.value } })} /></label><label>截止时间，可留空<input type="datetime-local" value={editor.values.due_at} onChange={event => setEditor({ ...editor, values: { ...editor.values, due_at: event.target.value } })} /></label><label>来源链接，可留空<input type="url" value={editor.values.source_url || ''} onChange={event => setEditor({ ...editor, values: { ...editor.values, source_url: event.target.value } })} /></label><p className={s.subtle}>此日期不会自动安排提醒。</p></>}
         {editor.kind === 'action' && <label>执行目标<input required value={editor.values.target} onChange={event => setEditor({ ...editor, values: { ...editor.values, target: event.target.value } })} /></label>}
         <div className={s.settingsActions}><button className={s.primary} type="submit" disabled={working}>保存{editor.kind === 'action' ? '并重新审批' : ''}</button><button className={s.secondary} type="button" onClick={closeModal}>取消</button></div>
