@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowUp, BookOpen, Check, ChevronRight, ChevronLeft, Heart, Users, Wallet, Briefcase, Palette, Zap, Copy, Download, FileText, Flag, Lightbulb, Menu, MessageCircle, MoreHorizontal, Plus, Radio, Search, Settings, Square, X } from 'lucide-react'
 import { api, browserTimezone, labels, localDate, terminal, time, type Action, type CheckItem, type Config, type FeedImage, type GoalSetup, type GoalCard, type Detail, type Editor, type Item, type Job, type Message, type Reference, type Schedule, type Session, type State, type Tab } from './data'
 import type { EndpointProfile, EndpointUrls, Protocol } from './data'
+import { searchProviders, type SearchProvider } from './data'
 import { Dialog } from './Dialog'
 import { SearchDialog } from './SearchDialog'
 import { SourcesDialog } from './SourcesDialog'
@@ -76,6 +77,7 @@ export default function App() {
   const [deletion, setDeletion] = useState<{ session?: Session; reminders?: { id: string; title: string; kind: string }[]; item?: Item; check?: CheckItem } | null>(null)
   const [config, setConfig] = useState<Config | null>(null)
   const [apiKey, setApiKey] = useState('')
+  const [searchKey, setSearchKey] = useState('')
   const [addingEndpoint, setAddingEndpoint] = useState(false)
   const [endpointUrls, setEndpointUrls] = useState(emptyEndpointUrls)
   const [endpointToDelete, setEndpointToDelete] = useState<EndpointProfile | null>(null)
@@ -508,9 +510,9 @@ export default function App() {
           {page === 'settings' && config && <form className={s.settings} onSubmit={event => {
             event.preventDefault()
             void act(async () => {
-              const { api_key_configured: _configured, endpoint_profiles: _profiles, official_endpoints: _official, ...fields } = config
-              const next = await api<Config>('/settings', 'PUT', { ...fields, ...(addingEndpoint ? { endpoint_urls: endpointUrls } : {}), ...(apiKey.trim() ? { api_key: apiKey } : {}) })
-              setConfig(next); setAddingEndpoint(false); setApiKey('')
+              const { api_key_configured: _configured, web_search_keys_configured: _searchConfigured, endpoint_profiles: _profiles, official_endpoints: _official, ...fields } = config
+              const next = await api<Config>('/settings', 'PUT', { ...fields, ...(addingEndpoint ? { endpoint_urls: endpointUrls } : {}), ...(apiKey.trim() ? { api_key: apiKey } : {}), ...(searchKey.trim() ? { web_search_api_key: searchKey } : {}) })
+              setConfig(next); setAddingEndpoint(false); setApiKey(''); setSearchKey('')
             }, '设置已保存。连接是否可用须看真实检查结果。')
           }}>
             <h2>DeepSeek 连接</h2>
@@ -540,6 +542,12 @@ export default function App() {
             <label>API 密钥<input type="password" autoComplete="new-password" placeholder="留空保留该配置已有的密钥" value={apiKey} onChange={event => setApiKey(event.target.value)} /></label>
             <p className={s.subtle}>{!addingEndpoint && config.endpoint_id === state?.settings.endpoint_id && state.settings.api_key_configured ? '此配置的密钥已保存在本机，不回显。' : '每组配置独立保存密钥，两条 URL 共用该密钥。请仅填写你信任的服务地址。'}</p>
             <div className={s.rowActions}><button type="submit" className={s.primary} disabled={working}>保存设置</button><button type="button" className={s.secondary} disabled={working || !!connectionJob || !state?.settings.api_key_configured || addingEndpoint || !!apiKey.trim() || config.endpoint_id !== state.settings.endpoint_id || config.protocol !== state.settings.protocol || config.model !== state.settings.model} onClick={() => void act(async () => { const job = await api<Job>('/settings/check', 'POST', {}); setConnectionJob(job.id); setNotice('正在进行真实检查') })}>真实连接检查</button></div>
+            <h2>联网搜索</h2>
+            <label>公开网页搜索<select value={config.web_search_enabled ? 'on' : 'off'} onChange={event => setConfig({ ...config, web_search_enabled: event.target.value === 'on' })}><option value="off">关闭（默认）</option><option value="on">开启</option></select></label>
+            <label>搜索服务<select value={config.web_search_provider} onChange={event => { setSearchKey(''); setConfig({ ...config, web_search_provider: event.target.value as SearchProvider }) }}>{Object.entries(searchProviders).map(([key, name]) => <option key={key} value={key}>{name}{config.web_search_keys_configured[key as SearchProvider] ? '（已配置）' : ''}</option>)}</select></label>
+            <label>{searchProviders[config.web_search_provider]} API 密钥<input type="password" autoComplete="new-password" maxLength={256} value={searchKey} onChange={event => setSearchKey(event.target.value)} placeholder="留空保留此服务的密钥" /></label>
+            <p className={s.subtle}>各服务的密钥独立保存在本机，不回显。开启后，搜索关键词只发给当前所选服务。仅返回摘要与链接，不影响订阅和后台任务。</p>
+            <button type="submit" className={s.secondary} disabled={working}>保存联网搜索设置</button>
             <h2>提醒与授权</h2><label>普通站内提醒<select value={config.notification_policy} onChange={event => setConfig({ ...config, notification_policy: event.target.value })}><option value="daily">日常：按已有授权自动发送</option><option value="strict">严格：每条提醒人工审批</option></select></label><p className={s.subtle}>导出文件始终先审批。未批准内容不会进入 Outbox。</p><p className={s.subtle}>网页提醒时区：{browserTimezone() || config.timezone}（{browserTimezone() ? '浏览器' : '备用设置'}）</p><label>命令行、后台和网页备用时区<input value={config.timezone} onChange={event => setConfig({ ...config, timezone: event.target.value })} /></label>
             <h2>隐私与运行</h2><p>模型调用会将本次有效会话、摘要、记忆、目标和引用资料发给配置的模型服务。停用记忆影响以后的调用。</p><p>双击 start.command 启动，启动终端与浏览器可以关闭。真正停止使用 stop.command。电脑休眠期间无法实时执行，恢复后每个调度最多补做一次。</p>
             {state && <><h2>今日使用</h2><p>{state.usage.requests} 次请求 · {state.usage.input_tokens + state.usage.output_tokens} tokens</p><p className={s.subtle}>{state.usage.cost_configured ? '按当前费率粗估 ' + state.usage.estimated_cost.toFixed(4) + ' ' + state.usage.currency : '尚未配置费率，以服务商账单为准。'}</p></>}

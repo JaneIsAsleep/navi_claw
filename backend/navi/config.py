@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from .endpoints import OFFICIAL_URLS, legacy_endpoint_urls, validate_endpoint
 from .storage import Database, packed
+from .web_search import DEFAULT_PROVIDER, SEARCH_PROVIDERS
 
 
 DEFAULTS = {
@@ -26,6 +27,8 @@ DEFAULTS = {
     "output_price_per_million": 0,
     "price_currency": "USD",
     "feed_brief": "",
+    "web_search_enabled": False,
+    "web_search_provider": DEFAULT_PROVIDER,
 }
 
 
@@ -75,6 +78,8 @@ class Settings:
         values = dict(DEFAULTS)
         rows = {row["key"]: json.loads(row["value"]) for row in self.db.all("SELECT * FROM settings")}
         values.update({key: value for key, value in rows.items() if key in DEFAULTS})
+        if "web_search_provider" not in rows and (rows.get("web_search_enabled") or self.web_search_key("brave")):
+            values["web_search_provider"] = "brave"
         profile = next((profile for profile in rows.get("endpoint_profiles", []) if profile["id"] == values["endpoint_id"]), None)
         if profile:
             values["endpoint_urls"] = profile["urls"]
@@ -115,9 +120,15 @@ class Settings:
         return {
             **{key: value for key, value in config.items() if key != "endpoint_urls"},
             "api_key_configured": bool(self.api_key(config)),
+            "web_search_keys_configured": {provider: bool(self.web_search_key(provider)) for provider in SEARCH_PROVIDERS},
             "endpoint_profiles": self.endpoint_profiles(),
             "official_endpoints": OFFICIAL_URLS,
         }
+
+    def web_search_key(self, provider):
+        credentials = self.credentials()
+        legacy = credentials.get("brave_search_api_key") if provider == "brave" else None
+        return credentials.get("web_search_keys", {}).get(provider) or legacy or os.environ.get(SEARCH_PROVIDERS[provider][2], "")
 
     def update(self, values: dict):
         before = self.current()
@@ -127,11 +138,21 @@ class Settings:
                 if not isinstance(value, str):
                     raise ValueError("密钥必须是文本")
                 continue
+            if key == "web_search_api_key":
+                if not isinstance(value, str) or len(value) > 256 or any(not 33 <= ord(char) <= 126 for char in value.strip()):
+                    raise ValueError("搜索密钥格式无效")
+                continue
             if key in {"endpoint_id", "endpoint_urls"}:
                 continue
             if key not in DEFAULTS:
                 raise ValueError(f"不支持的设置：{key}")
-            if key == "feed_brief":
+            if key == "web_search_enabled":
+                if type(value) is not bool:
+                    raise ValueError("联网搜索开关须为布尔值")
+            elif key == "web_search_provider":
+                if not isinstance(value, str) or value not in SEARCH_PROVIDERS:
+                    raise ValueError("不支持的搜索服务")
+            elif key == "feed_brief":
                 if not isinstance(value, str) or len(value) > 2000:
                     raise ValueError("关注说明最多 2000 字")
             elif key in {"protocol", "workflow", "notification_policy"}:
@@ -170,6 +191,14 @@ class Settings:
                 valid["endpoint_id"] = profile_id
             if values.get("api_key", "").strip():
                 self.save_api_key(profile_id, values["api_key"].strip())
+            if values.get("web_search_api_key", "").strip():
+                credentials = self.credentials()
+                provider = valid.get("web_search_provider", before["web_search_provider"])
+                credentials.setdefault("web_search_keys", {})[provider] = values["web_search_api_key"].strip()
+                valid.setdefault("web_search_provider", provider)
+                self.write_credentials(credentials)
+            if "web_search_enabled" in valid:
+                valid.setdefault("web_search_provider", before["web_search_provider"])
             for key, value in valid.items():
                 self.store(conn, key, value)
         if self.on_budget_change and any(key in valid and before[key] != valid[key] for key in ('daily_requests', 'daily_tokens')):

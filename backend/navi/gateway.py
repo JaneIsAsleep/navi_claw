@@ -16,6 +16,7 @@ from .model import AgentError, DeepSeek
 from .reminder_time import calendar_occurrences, finite_number, has_time_reply, local_timestamp, timezone_for
 from .skills import BriefingSkills
 from .storage import Database, packed, uid
+from .web_search import WebSearch
 
 
 TERMINAL = {"succeeded", "failed", "cancelled", "timed_out"}
@@ -48,6 +49,7 @@ class Gateway:
         self.settings = Settings(self.db, directory)
         self.skills = BriefingSkills(root, directory)
         self.feeds = PublicFeeds(self)
+        self.web_search = WebSearch()
         self.model = model or DeepSeek()
         self.listeners: dict[str, set[asyncio.Queue]] = {}
         self.running = False
