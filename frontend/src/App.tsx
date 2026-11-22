@@ -245,6 +245,23 @@ export default function App() {
     try { await operation(); await refresh(); if (message) setNotice(message) } catch (failure) { setError((failure as Error).message) } finally { setWorking(false) }
   }
   function actPath(path: string, method: string, data: unknown, message = '') { void act(async () => { await api(path, method, data); if (detail && path === '/records/' + detail.id) setDetail(await api<Detail>(path)) }, message) }
+  function acknowledgeReminder(outboxId: string) {
+    void act(async () => {
+      await api('/notifications/' + outboxId + '/acknowledge', 'POST', {})
+      setMessages(current => current.filter(row => row.outbox_id !== outboxId))
+      inputRef.current?.focus()
+    }, '已确认收到提醒')
+  }
+  function dismissReminder(actionId: string) {
+    void act(async () => {
+      const result = await api<{ outbox_id: string | null }>('/actions/' + actionId + '/dismiss-reminder', 'POST', {})
+      if (result.outbox_id) setMessages(current => current.filter(row => row.outbox_id !== result.outbox_id))
+      setState(current => current && { ...current, actions: current.actions.map(row =>
+        row.id === actionId ? { ...row, acknowledged_at: row.acknowledged_at ?? Date.now() / 1000 } : row
+      ) })
+      inputRef.current?.focus()
+    }, '已收起提醒')
+  }
   function capture() { trigger.current = menuId ? menuTrigger.current : interaction.current || document.activeElement as HTMLElement }
   async function resetMainSession(row: Session) {
     await act(async () => {
@@ -415,7 +432,7 @@ export default function App() {
   const records = [...(state?.records.filter(row => row.kind === page && (page !== 'goal' || !['completed','cancelled'].includes(row.payload.state || 'active')) && (page !== 'feed' || row.payload.origin !== 'rss_material' && !row.payload.item_id?.toString().startsWith('rss-'))) || []), ...(page === 'goal' ? Object.values(completedRows) : [])].filter((row, index, rows) => rows.findIndex(other => other.id === row.id) === index).sort((a, b) => b.created - a.created)
   const trackingSchedules = state?.schedules.filter(row => !['completed','cancelled'].includes(row.state)) || []
   const trackingJobs = state?.jobs.filter(row => !row.task_id && !terminal(row.status) && !['feed','ideas','session_meta','goal_setup','goal_save'].includes(row.kind)) || []
-  const sessionActions = state?.actions.filter(row => row.source_session_id === sessionId) || []
+  const sessionActions = state?.actions.filter(row => row.source_session_id === sessionId && row.acknowledged_at == null) || []
 
   const contentHeader = <>
           <div className={s.pageIntro}><div className={s.pageHeading}><h1>{title}</h1>{['feed','goal'].includes(page) && <div className={s.pageOptions}><button className={s.iconButton} aria-label={page === 'feed' ? '动态选项' : '目标选项'} aria-expanded={pageMenu} onClick={() => setPageMenu(!pageMenu)}><MoreHorizontal size={22} /></button>{pageMenu && <div className={s.optionsMenu}>{page === 'goal' ? <button onClick={() => { capture(); setPageMenu(false); setCompletedOpen(true) }}>查看已完成目标</button> : <><button onClick={() => { setPageMenu(false); edit('brief') }}>关注说明</button><button onClick={() => { capture(); setPageMenu(false); setSourcesOpen(true) }}>管理来源</button></>}</div>}</div>}</div><p>{({ search: '对话标题搜索，包含匹配的封存话题。', feed: '关注内容。按本地生成或收录顺序安静更新。', idea: '看看今天能帮你做点什么。这里的建议会参考你正在做的事和订阅的内容。', goal: '方向、下一步和真实推进记录。', artifact: '查看和下载已经保存的成果。', settings: '连接模型，掌握授权和本机运行边界。' } as Record<string, string>)[page]}</p></div>
@@ -429,12 +446,13 @@ export default function App() {
             {messages.map((message, index) => <article key={message.id} data-message-id={message.id} className={s.message + ' ' + (message.role === 'user' ? s.user : s.assistant) + (searchTarget?.message === message.id ? ' ' + s.searchHit : '')}>
               <div className={s.speaker}>{message.role === 'user' ? '你' : 'Navi'}<time>{time(message.created)}{message.outbox_id && ' · 实际投递'}</time></div>
               <div className={s.bubble}><Markdown>{message.content}</Markdown>{message.references?.map(ref => <div className={s.savedReference} key={ref.id}>引用：{ref.title}{ref.source_url && <a href={ref.source_url} target="_blank" rel="noreferrer">查看来源</a>}</div>)}{message.interaction?.type === 'goal_choices' && <GoalChoices card={message.interaction} active={!archived && goalSetup.active_card_id === message.id && goalSetup.version === message.interaction.setup_version} working={working || !!busy} choose={id => void chooseGoal(message.interaction!,id)} />}</div>
+              {message.outbox_id && <button type="button" className={s.secondary} disabled={working} onClick={() => acknowledgeReminder(message.outbox_id!)}>收到</button>}
               <div className={s.messageActions}><button className={s.iconButton} aria-label="复制消息" onClick={() => void act(async () => { await navigator.clipboard.writeText(message.content) }, '已复制')}><Copy size={16} /></button><button className={s.textButton} onClick={() => saveDraft(input, [...references, { id: message.id, kind: 'message', title: message.role === 'user' ? '你的消息' : 'Navi 回复', body: message.content }].slice(-5))}>引用讨论</button></div>
-              {message.role === 'assistant' && !message.outbox_id && !messages.slice(index + 1).some(m => m.job_id === message.job_id && m.role === 'assistant' && !m.outbox_id) && sessionActions.filter(row => row.job_id === message.job_id).map(row => <ActionCard key={row.id} row={row} working={working} decide={decide} edit={row => edit('action', row)} openSource={id => void openSession(id)} history={path => void history(path)} />)}
+              {message.role === 'assistant' && !message.outbox_id && !messages.slice(index + 1).some(m => m.job_id === message.job_id && m.role === 'assistant' && !m.outbox_id) && sessionActions.filter(row => row.job_id === message.job_id).map(row => <ActionCard key={row.id} row={row} working={working} decide={decide} edit={row => edit('action', row)} openSource={id => void openSession(id)} history={path => void history(path)} dismissReminder={dismissReminder} />)}
               {message.role === 'assistant' && state?.records.filter(row => (row.payload.source_job_id === message.job_id || row.payload.job_id === message.job_id) && ['memory', 'goal', 'artifact'].includes(row.kind)).map(row => <button className={s.textButton} key={row.id} onClick={() => row.kind === 'memory' ? showAssistant('identity', true, row.id) : void openRecord(row)}>{row.kind === 'memory' ? '查看记忆' : row.kind === 'goal' ? '查看目标' : '查看成果'}：{row.payload.title}</button>)}
               {message.role === 'user' && state?.jobs.filter(job => job.id === message.job_id && terminal(job.status) && job.status !== 'succeeded').map(job => <p className={s.failureText} key={job.id}>{labels[job.status]}：{job.error}<button className={s.textButton} onClick={() => saveDraft(message.content, message.references || [])}>放回草稿</button></p>)}
             </article>)}
-            {sessionActions.filter(row => !messages.some(message => message.role === 'assistant' && !message.outbox_id && message.job_id === row.job_id)).map(row => <article key={'proposal-' + row.id} className={s.message + ' ' + s.assistant}><div className={s.speaker}>Navi</div><p className={s.subtle}>此话题保留的行动提案，实际执行以状态为准。</p><ActionCard row={row} working={working} decide={decide} edit={row => edit('action', row)} openSource={id => void openSession(id)} history={path => void history(path)} /></article>)}
+            {sessionActions.filter(row => !messages.some(message => message.role === 'assistant' && !message.outbox_id && message.job_id === row.job_id)).map(row => <article key={'proposal-' + row.id} className={s.message + ' ' + s.assistant}><div className={s.speaker}>Navi</div><p className={s.subtle}>此话题保留的行动提案，实际执行以状态为准。</p><ActionCard row={row} working={working} decide={decide} edit={row => edit('action', row)} openSource={id => void openSession(id)} history={path => void history(path)} dismissReminder={dismissReminder} /></article>)}
             {busy && <article className={s.message + ' ' + s.assistant}><div className={s.speaker}>Navi</div><div className={s.bubble}>{stream.text ? <Markdown>{stream.text}</Markdown> : <p>{stream.status || '正在处理'}</p>}</div><p role="status" className={s.subtle}>{stream.status}</p></article>}
           </div>}
         </section>

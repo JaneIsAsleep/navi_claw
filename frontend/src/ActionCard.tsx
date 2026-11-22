@@ -3,7 +3,7 @@ import { type Action, labels, time } from './data'
 import { Markdown } from './Markdown'
 import s from './App.module.css'
 
-export function ActionCard({ row, working, decide, edit, openSource, history }: { row: Action; working: boolean; decide: (row: Action, decision: string) => void; edit: (row: Action) => void; openSource: (id: string) => void; history: (path: string) => void }) {
+export function ActionCard({ row, working, decide, edit, openSource, history, dismissReminder }: { row: Action; working: boolean; decide: (row: Action, decision: string) => void; edit: (row: Action) => void; openSource: (id: string) => void; history: (path: string) => void; dismissReminder?: (id: string) => void }) {
   const container = useRef<HTMLElement>(null)
   function decision(value: string) { container.current?.focus(); decide(row, value) }
   return <article ref={container} tabIndex={-1} className={s.actionCard} aria-label={'审核请求 ' + row.title}>
@@ -14,6 +14,9 @@ export function ActionCard({ row, working, decide, edit, openSource, history }: 
     {row.delivery_error && <p className={s.failureText}>{row.delivery_error}</p>}
     {row.source_title ? <button className={s.textButton} onClick={() => openSource(row.source_session_id!)}>原提案：{row.source_title}{row.source_state === 'archived' ? '（已封存）' : ''}</button> : <p className={s.subtle}>暂无关联对话</p>}
     <button className={s.textButton} onClick={() => history('/actions/' + row.id + '/history')}>版本与执行记录</button>
+    {dismissReminder && row.kind === 'notification' && (row.status === 'delivered' || row.delivery_state === 'delivered') && row.acknowledged_at == null && (
+      <button type="button" className={s.secondary} disabled={working} onClick={() => dismissReminder(row.id)}>收到</button>
+    )}
     {row.status === 'pending' && <div className={s.approvalButtons}>
       <button className={s.primary} disabled={working} onClick={() => decision('approve')}><Check size={16} />批准执行</button>
       <button className={s.secondary} disabled={working} onClick={() => decision('reject')}>拒绝</button>

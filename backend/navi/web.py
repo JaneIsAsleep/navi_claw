@@ -131,7 +131,7 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
 
     @app.get("/api/sessions/{identity}/messages")
     def messages(identity: str):
-        return gateway.messages(identity)
+        return gateway.messages(identity, visible_only=True)
 
     @app.post("/api/chat")
     async def chat(request: Request):
@@ -249,6 +249,14 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
     def read_notifications():
         gateway.db.execute("UPDATE notifications SET unread=0")
         return {"read": True}
+
+    @app.post("/api/notifications/{outbox_id}/acknowledge")
+    def acknowledge_notification(outbox_id: str):
+        return gateway.acknowledge_notification(outbox_id)
+
+    @app.post("/api/actions/{identity}/dismiss-reminder")
+    def dismiss_delivered_reminder(identity: str):
+        return gateway.dismiss_delivered_reminder(identity)
 
     @app.put("/api/settings")
     async def settings(request: Request):

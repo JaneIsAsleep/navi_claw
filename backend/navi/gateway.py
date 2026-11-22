@@ -21,6 +21,11 @@ from .storage import Database, packed, uid
 TERMINAL = {"succeeded", "failed", "cancelled", "timed_out"}
 RECORD_KINDS = {"memory", "goal", "feed", "idea", "artifact"}
 VISIBLE_FEED = "kind='feed' AND json_extract(payload,'$.origin')='generated' AND COALESCE(json_extract(payload,'$.display_state'),'')<>'hidden_legacy'"
+VISIBLE_MESSAGE = """NOT EXISTS (
+    SELECT 1 FROM outbox o JOIN actions a ON a.id=o.action_id
+    LEFT JOIN notifications n ON n.outbox_id=o.id
+    WHERE o.id=m.outbox_id AND COALESCE(n.acknowledged_at,a.reminder_dismissed_at) IS NOT NULL
+)"""
 IDEA_ACTIONS = {"goal_breakdown", "source_summary", "document_draft", "next_step", "task_review"}
 CATEGORIES = {"health": "健康", "relationships": "人际关系", "finance": "财务", "career": "职涯", "interests": "兴趣", "productivity": "生产力", "other": "其他"}
 TRANSIENT_CONTENT_ERRORS = {'model_timeout', 'model_connection_error', 'model_transport_error', 'model_rate_limited', 'model_server_error', 'sleep_interrupted'}
@@ -88,7 +93,7 @@ class Gateway:
             "main_session_id": self.main_session()["id"],
             "schedules": self.db.all("SELECT s.*,t.title,t.instruction,t.state,t.session_id,t.goal_id FROM schedules s JOIN tasks t ON t.id=s.task_id ORDER BY s.created DESC"),
             "jobs": self.db.all("SELECT id,task_id,session_id,trigger_key,kind,status,input,result,error,error_code,recovery_count,attempt,next_run,deadline,created,updated FROM jobs WHERE status IN ('pending','running') OR id IN (SELECT id FROM jobs ORDER BY created DESC LIMIT 100) ORDER BY created DESC,rowid DESC"),
-            "actions": self.db.all("SELECT a.*,s.title source_title,s.state source_state,o.state delivery_state,o.error delivery_error FROM actions a LEFT JOIN sessions s ON s.id=a.source_session_id LEFT JOIN outbox o ON o.action_id=a.id ORDER BY a.status='pending' DESC,a.created DESC"),
+            "actions": self.db.all("SELECT a.*,s.title source_title,s.state source_state,o.state delivery_state,o.error delivery_error,COALESCE(n.acknowledged_at,a.reminder_dismissed_at) acknowledged_at FROM actions a LEFT JOIN sessions s ON s.id=a.source_session_id LEFT JOIN outbox o ON o.action_id=a.id LEFT JOIN notifications n ON n.outbox_id=o.id ORDER BY a.status='pending' DESC,a.created DESC"),
             "notifications": self.db.all("SELECT * FROM notifications ORDER BY created DESC"),
             "records": records, "settings": settings, "usage": usage,
             "check_items": self.skills.items(), "feed_catalog": self.feeds.catalog(), "now": now,
@@ -155,7 +160,7 @@ class Gateway:
             sql += " AND (instr(lower(s.title),lower(?))>0"
             params.append(query)
             if scope == 'all':
-                sql += " OR EXISTS(SELECT 1 FROM messages m WHERE m.session_id=s.id AND m.role IN ('user','assistant') AND instr(lower(m.content),lower(?))>0)"
+                sql += f" OR EXISTS(SELECT 1 FROM messages m WHERE m.session_id=s.id AND m.role IN ('user','assistant') AND instr(lower(m.content),lower(?))>0 AND {VISIBLE_MESSAGE})"
                 params.append(query)
             sql += ')'
         sql += ' ORDER BY title_hit DESC,s.updated DESC,s.id'
@@ -167,7 +172,7 @@ class Gateway:
             hit = row.pop('title_hit')
             row.update(match_kind='title' if query and hit else 'recent', match_message_id=None, match_excerpt='')
             if query and not hit:
-                message = self.db.one("SELECT id,content,instr(lower(content),lower(?)) hit FROM messages WHERE session_id=? AND role IN ('user','assistant') AND instr(lower(content),lower(?))>0 ORDER BY created DESC,id DESC LIMIT 1", (query, row['id'], query))
+                message = self.db.one(f"SELECT m.id,m.content,instr(lower(m.content),lower(?)) hit FROM messages m WHERE m.session_id=? AND m.role IN ('user','assistant') AND instr(lower(m.content),lower(?))>0 AND {VISIBLE_MESSAGE} ORDER BY m.created DESC,m.id DESC LIMIT 1", (query, row['id'], query))
                 if message:
                     start = max(0, message['hit'] - 61)
                     end = start + 158
@@ -312,10 +317,42 @@ class Gateway:
             identity = self.insert_job(conn, kind="feed", text="按关注说明整理已核实的来源与本机事项，保留来源和时间；无相关资料时明确说明。\n关注说明：" + brief)
         return self.require("jobs", identity)
 
-    def messages(self, session_id):
+    def messages(self, session_id, *, visible_only=False):
         if self.require("sessions", session_id)['state'] == 'deleting':
             raise ValueError('此话题已不可访问')
-        return [{**row, "references": json.loads(row["references_json"]), "interaction": json.loads(row["interaction_json"])} for row in self.db.all("SELECT * FROM messages WHERE session_id=? ORDER BY created,rowid", (session_id,))]
+        sql = "SELECT m.* FROM messages m WHERE m.session_id=?"
+        if visible_only:
+            sql += " AND " + VISIBLE_MESSAGE
+        return [{**row, "references": json.loads(row["references_json"]), "interaction": json.loads(row["interaction_json"])} for row in self.db.all(sql + " ORDER BY m.created,m.rowid", (session_id,))]
+
+    def acknowledge_notification(self, outbox_id):
+        with self.db.transaction() as conn:
+            result = conn.execute(
+                "UPDATE notifications SET acknowledged_at=COALESCE(acknowledged_at,?),unread=0 WHERE outbox_id=?",
+                (self.clock(), outbox_id),
+            )
+            if not result.rowcount:
+                raise APIError("没有找到已投递的提醒", 404)
+            conn.execute("UPDATE messages SET unread=0 WHERE outbox_id=?", (outbox_id,))
+        return {"acknowledged": True}
+
+    def dismiss_delivered_reminder(self, identity):
+        with self.db.transaction() as conn:
+            row = conn.execute(
+                "SELECT a.kind,a.status,o.id outbox_id,o.state delivery_state FROM actions a "
+                "LEFT JOIN outbox o ON o.action_id=a.id WHERE a.id=?",
+                (identity,),
+            ).fetchone()
+            if row is None:
+                raise APIError("没有找到提醒", 404)
+            if row["kind"] != "notification" or (row["status"] != "delivered" and row["delivery_state"] != "delivered"):
+                raise ValueError("只能收起已投递的提醒")
+            now = self.clock()
+            conn.execute("UPDATE actions SET reminder_dismissed_at=COALESCE(reminder_dismissed_at,?) WHERE id=?", (now, identity))
+            if row["outbox_id"]:
+                conn.execute("UPDATE notifications SET acknowledged_at=COALESCE(acknowledged_at,?),unread=0 WHERE outbox_id=?", (now, row["outbox_id"]))
+                conn.execute("UPDATE messages SET unread=0 WHERE outbox_id=?", (row["outbox_id"],))
+        return {"dismissed": True, "outbox_id": row["outbox_id"]}
 
     def job_config(self):
         config = self.settings.current()
@@ -942,7 +979,7 @@ class Gateway:
                         raise ValueError("批准记录与投递内容不一致")
                     target = "inbox"
                     if payload["kind"] == "notification":
-                        conn.execute("INSERT INTO notifications VALUES(?,?,?, ?,1,?)", (uid(), row["id"], payload["title"], payload["body"], now))
+                        conn.execute("INSERT INTO notifications(id,outbox_id,title,body,unread,created) VALUES(?,?,?,?,1,?)", (uid(), row["id"], payload["title"], payload["body"], now))
                         origin_id = action["source_session_id"]
                         if origin_id:
                             origin = conn.execute("SELECT * FROM sessions WHERE id=?", (origin_id,)).fetchone()
