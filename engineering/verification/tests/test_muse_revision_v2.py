@@ -479,6 +479,69 @@ async def test_natural_phrasing_keeps_discussion_read_only(g, text):
     assert g.record_detail(goal['id'])['payload']['body'] == '每日阅读'
 
 
+async def test_named_practice_steps_are_saved_verbatim_from_chat(g):
+    title = '自学吉他隔日练习安排'
+    goal = g.record('goal', {'title': title, 'body': '隔日练习三十分钟', 'next_step': '列出练习项目顺序'})
+    other = g.record('goal', {'title': '自学吉他隔日练习安排备选', 'next_step': '原安排'})
+    steps = '前10分钟爬格子热身，后20分钟练习周杰伦《晴天》，并记录难点。'
+
+    class NoModel:
+        async def chat(self, **request):
+            raise AssertionError('明确点名的练习步骤更新不需要模型')
+
+    g.model = NoModel()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(g)), base_url='http://testserver') as client:
+        response = await client.post('/api/chat', json={'text': f'修改{title}，练习步骤改为{steps}'})
+        assert response.status_code == 200
+        job = response.json()
+        await g.run_one()
+
+    result = g.require('jobs', job['id'])
+    assert result['status'] == 'succeeded' and steps in result['result']
+    assert g.record_detail(goal['id'])['payload'].items() >= {'body': '隔日练习三十分钟', 'next_step': steps}.items()
+    assert g.record_detail(other['id'])['payload']['next_step'] == '原安排'
+    assert not g.db.all('SELECT id FROM schedules')
+
+
+async def test_guitar_goal_chat_collects_details_confirms_and_edits_by_short_name(g):
+    draft = {'title': '自学吉他弹唱《晴天》', 'body': '学期末前完整弹唱，隔天练半小时', 'next_step': '确认曲谱'}
+    steps = '前10分钟爬格子热身，后20分钟练习周杰伦《晴天》，并记录难点'
+    opening = '我要再设置一个自学吉他的目标'
+    details = '学会弹唱周杰伦的晴天，可以隔天练习半小时，在这学期末前吧'
+    edit = f'修改一下自学吉他隔日练习安排，练习步骤改为{steps}'
+
+    class GuitarModel:
+        async def chat(self, **request):
+            last = request['messages'][-1]['content']
+            if last == opening:
+                return Reply([{'type': 'text', 'text': '你希望学会弹哪首歌？'}])
+            assert last == details
+            return Reply([{'type': 'tool_use', 'id': 'draft', 'name': 'create_goal', 'input': draft}])
+
+    g.model = GuitarModel()
+    for text in (opening, details):
+        job = g.chat(text)
+        await g.run_one()
+        assert g.require('jobs', job['id'])['status'] == 'succeeded'
+    assert '回复「确认」' in g.require('jobs', job['id'])['result']
+    assert not g.db.all("SELECT id FROM records WHERE kind='goal'")
+
+    confirmation = g.chat('确认')
+    await g.run_one()
+    assert g.require('jobs', confirmation['id'])['result'] == '已保存目标「自学吉他弹唱《晴天》」。'
+    goal = g.db.one("SELECT id FROM records WHERE kind='goal'")
+
+    failed = g.chat(edit)
+    g.db.execute("UPDATE jobs SET status='failed' WHERE id=?", (failed['id'],))
+    retry = g.chat('你再试一次写入')
+    await g.run_one()
+    assert g.require('jobs', retry['id'])['status'] == 'succeeded'
+    assert g.record_detail(goal['id'])['payload']['next_step'] == steps
+    direct = g.chat(edit)
+    await g.run_one()
+    assert g.require('jobs', direct['id'])['status'] == 'succeeded'
+
+
 async def test_answering_clarification_by_title_completes_original_edit(g):
     goal = reading(g)
     other = g.record('goal', {'title': '周末运动', 'body': '跑步'})
@@ -497,6 +560,42 @@ async def test_answering_clarification_by_title_completes_original_edit(g):
     assert g.require('jobs', selection['id'])['status'] == 'succeeded'
     assert g.record_detail(goal['id'])['payload']['body'] == '每天十分钟'
     assert g.record_detail(other['id'])['payload']['body'] == '跑步'
+
+
+async def test_repeat_guitar_edit_uses_short_name_and_strips_separator(g):
+    goal = g.record('goal', {'title': '自学吉他弹唱《晴天》', 'body': '隔天练习'})
+    first = '前10分钟爬格子热身，后20分钟练《晴天》，并记录难点'
+    second = '前20分钟爬格子热身，后20分钟练习周杰伦《晴天》，并记录难点和收获'
+    for command, expected in (
+        (f'把自学吉他弹唱《晴天》目标的练习步骤改成：{first}', first),
+        (f'再修改一下自学吉他隔日练习安排，练习步骤改为{second}', second),
+    ):
+        job = g.chat(command)
+        await g.run_one()
+        assert g.require('jobs', job['id'])['result'].endswith(expected)
+        assert g.record_detail(goal['id'])['payload']['next_step'] == expected
+
+
+@pytest.mark.parametrize('answer', ['自学吉他弹唱晴天', '是的', '你提交吧'])
+async def test_goal_edit_selects_or_confirms_persisted_target(g, answer):
+    goal = g.record('goal', {'title': '自学吉他弹唱《晴天》', 'next_step': '练和弦'})
+    if answer == '自学吉他弹唱晴天':
+        other = g.record('goal', {'title': '绩点目标', 'next_step': '复习'})
+        command = '修改目标：前 20 分钟爬格子热身，后 20 分钟练《晴天》，记录难点和收获'
+    else:
+        other = None
+        command = '把吉他安排的练习步骤改成：前 20 分钟爬格子热身，后 20 分钟练《晴天》，记录难点和收获'
+    expected = command.split('：', 1)[1]
+    initial = g.chat(command)
+    await g.run_one()
+    assert '自学吉他弹唱《晴天》' in g.require('jobs', initial['id'])['result']
+    assert g.record_detail(goal['id'])['payload']['next_step'] == '练和弦'
+    selection = g.chat(answer, initial['session_id'])
+    await g.run_one()
+    assert g.require('jobs', selection['id'])['status'] == 'succeeded'
+    assert g.record_detail(goal['id'])['payload']['next_step'] == expected
+    if other:
+        assert g.record_detail(other['id'])['payload']['next_step'] == '复习'
 
 
 async def test_goal_content_edit_does_not_authorize_scheduling(g):

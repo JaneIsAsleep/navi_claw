@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+import unicodedata
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -38,7 +39,16 @@ EDIT_CONTENT = re.compile(r'修改|更新|调整|更改|改成|改为|改到|改
 STATE_ACTIONS = {'completed': r'完成|\bcomplete\b', 'paused': r'暂停|\bpause\b', 'active': r'恢复|\b(?:resume|reactivate)\b'}
 EDIT = re.compile('|'.join([EDIT_CONTENT.pattern, *STATE_ACTIONS.values()]), re.I)
 BODY = re.compile(r'描述|说明|正文|内容|description|\bbody\b', re.I)
-STEP = re.compile(r'下一步|行动步骤|next[_ ]step', re.I)
+STEP = re.compile(r'下一步|(?:行动|练习|训练|学习|执行)步骤|next[_ ]step', re.I)
+STEP_REPLACEMENT = re.compile(
+    rf'(?:{STEP.pattern})\s*(?:(?:修改|更新|调整|更改|改|设)?(?:成|为|到)\s*[:：]?|[:：])',
+    re.I,
+)
+GOAL_STEP_COMMAND = re.compile(r'^\s*(?:(?:请|帮我|再)\s*)*(?:修改|更新|调整|更改)(?:一下)?\s*(?:这个|当前)?目标\s*[:：]')
+GOAL_EDIT_CONFIRMATION = re.compile(r'(?:是的|对|是|确认|同意|(?:你)?(?:提交|修改|执行)吧)[。！! ]*')
+GOAL_OPENING = re.compile(r'^(?:(?:我想|我要|我希望|请|帮我|再|新)\s*)*(?:设置|设定|创建|建立|添加|定)(?:一下)?(?:一个|一项)?[^，。；！？\n]{1,60}(?:的)?目标[。！! ]*$')
+GOAL_CONFIRMATION = re.compile(r'(?:确认(?:保存|创建)?|同意|就按这个保存|保存这个目标)[。！! ]*')
+GOAL_EDIT_RETRY = re.compile(r'(?:请|你|帮我)?\s*(?:再试(?:一次|一下)?(?:写入|修改|保存)?|重试(?:修改|写入|保存)?)[。！! ]*')
 
 
 def unquoted(text):
@@ -50,14 +60,27 @@ def goal_subject(command):
     words = command.strip().strip('。！! ')
     words = re.sub(r'^(?:就)?按(?:你说的|刚才的建议|这个方案)', '', words)
     words = re.sub(r'^.*?调用\s*(?:update_goal|cancel_goal|cancel_tracking)\s*', '', words)
-    words = re.sub(r'^(?:(?:我想|请|麻烦|帮我|直接|现在|把|将|给|修改|更新|调整|更改|改|一下|完成|暂停|恢复|取消|删除|停止|update |change |complete |pause |resume )\s*)+', '', words, flags=re.I)
+    words = re.sub(r'^(?:(?:再(?=\s*(?:修改|更新|调整|更改|改))|我想|请|麻烦|帮我|直接|现在|把|将|给|修改|更新|调整|更改|改|一下|完成|暂停|恢复|取消|删除|停止|update |change |complete |pause |resume )\s*)+', '', words, flags=re.I)
     field = re.search(BODY.pattern + '|' + STEP.pattern + r'|(?:标记|标注|设置)为', unquoted(words), re.I)
     if field:
         words = words[:field.start()]
-    words = words.split('，')[0].strip(' 的：:')
+    words = words.split('，')[0].strip(' 的：:,')
     words = re.sub(r'(?:修改|更新|调整|更改|改)(?:一下)?$', '', words)
     words = re.sub(r'^(?:这个|当前|该|此|已保存的?)?目标(?:\s*ID)?\s*[:：]?\s*', '', words, flags=re.I)
     return words.strip(' 的：:"“”「」')
+
+
+def goal_title_key(value):
+    return ''.join(character for character in unicodedata.normalize('NFKC', value).casefold()
+                   if not character.isspace() and not unicodedata.category(character).startswith('P'))
+
+
+def match_goal_names(rows, subject):
+    exact = [row for row in rows if subject in (row['id'], row['title'])]
+    if exact:
+        return exact
+    key = goal_title_key(subject)
+    return [row for row in rows if key and goal_title_key(row['title']) == key]
 
 
 def clarify(rows, label):
@@ -331,6 +354,57 @@ class Agent:
         quoted = re.fullmatch(r'.*[“「"].*(保存|创建|确认目标).*[”」"].*',text) and not re.search(r'^(请|帮我)?(保存|创建|确认目标)',text)
         return bool(explicit and not deferred and not quoted)
 
+    def previous_chat_turn(self, job):
+        rows = self.g.db.all(
+            "SELECT role,content,job_id FROM messages WHERE session_id=? AND rowid < "
+            "(SELECT rowid FROM messages WHERE job_id=? AND role='user' LIMIT 1) "
+            "AND outbox_id IS NULL ORDER BY rowid DESC LIMIT 2",
+            (job['session_id'], job['id']),
+        )
+        if not rows:
+            return None, None
+        if rows[0]['role'] == 'user':
+            return rows[0], None
+        if len(rows) == 2 and rows[1]['role'] == 'user' and rows[0]['job_id'] == rows[1]['job_id']:
+            return rows[1], rows[0]
+        return None, None
+
+    def goal_draft_mode(self, job):
+        if job['kind'] != 'chat' or job['task_id'] or DEFERRED.search(unquoted(job['input'])):
+            return None
+        if GOAL_OPENING.fullmatch(job['input'].strip()) and not self.authorized_goal_save(job['input']):
+            return 'opening'
+        prior, answer = self.previous_chat_turn(job)
+        if not prior or not answer or not GOAL_OPENING.fullmatch(prior['content'].strip()):
+            return None
+        if DEFERRED.search(unquoted(prior['content'])) or self.authorized_goal_save(prior['content']):
+            return None
+        if (GOAL_CONFIRMATION.fullmatch(job['input'].strip()) or self.authorized_goal_save(job['input'])
+                or re.search(r'取消|不想|不设|先不|暂不|只讨论|^不用|^算了', unquoted(job['input']))
+                or self.update_request(job['input'])):
+            return None
+        return 'details'
+
+    def confirmed_goal_draft(self, job):
+        if job['kind'] != 'chat' or job['task_id'] or not GOAL_CONFIRMATION.fullmatch(job['input'].strip()):
+            return None
+        prior, answer = self.previous_chat_turn(job)
+        if not prior or not answer:
+            return None
+        receipt = self.g.db.one(
+            "SELECT result FROM tool_calls WHERE job_id=? AND name='create_goal' "
+            "AND json_extract(result,'$.status')='goal_draft' ORDER BY rowid DESC LIMIT 1",
+            (prior['job_id'],),
+        )
+        if receipt:
+            draft = json.loads(receipt['result'])['draft']
+            if answer['content'] == self.goal_draft_message(draft):
+                return draft
+        return None
+
+    def goal_draft_message(self, draft):
+        return f"目标草案「{draft['title']}」\n\n内容：{draft['body']}\n\n下一步：{draft['next_step']}\n\n回复「确认」即可保存。"
+
     def goal_candidates(self, job, subject, *, active_only=False):
         rows = self.g.db.all("SELECT id, json_extract(payload,'$.title') title, "
                              "json_extract(payload,'$.session_id') session_id, "
@@ -339,11 +413,11 @@ class Agent:
         goals = [r for r in rows if r['state'] in states]
         # An explicit name always takes precedence over the open goal conversation.
         if subject:
-            exact = [r for r in goals if r['id'] in subject or r['title'] == subject]
+            exact = match_goal_names(goals, subject)
             if exact:
                 return exact
-            fragment = subject.removesuffix('目标').strip()
-            return [r for r in goals if fragment and fragment in r['title']]
+            fragment = goal_title_key(subject.removesuffix('目标'))
+            return [r for r in goals if r['id'] in subject or (fragment and fragment in goal_title_key(r['title']))]
 
         message = self.g.db.one("SELECT rowid,references_json FROM messages WHERE job_id=? AND role='user'", (job['id'],))
         refs = {ref.get('id') for ref in json.loads(message['references_json']) if ref.get('kind') == 'goal'} if message else set()
@@ -394,7 +468,7 @@ class Agent:
         directive = intent[:end]
         if DEFERRED.search(directive) or not EDIT.search(directive):
             return None
-        if not re.match(r'\s*(?:我想|请|帮我|麻烦|直接|把|将|给|按|就|现在|修改|更新|调整|更改|改|完成|暂停|恢复|调用|update|change|complete|pause|resume)', directive, re.I):
+        if not re.match(r'\s*(?:再\s*)?(?:我想|请|帮我|麻烦|直接|把|将|给|按|就|现在|修改|更新|调整|更改|改|完成|暂停|恢复|调用|update|change|complete|pause|resume)', directive, re.I):
             # In spoken Chinese the field can precede the verb, e.g. 下一步改成选书.
             if not replace or not (STEP.search(directive) or BODY.search(directive)):
                 return None
@@ -430,11 +504,63 @@ class Agent:
                 return current
         return []
 
+    def explicit_step_edit(self, job):
+        text = job['input']
+        directive = unquoted(text)
+        generic = GOAL_STEP_COMMAND.match(directive)
+        change = generic or STEP_REPLACEMENT.search(directive)
+        if not change:
+            return None
+        request = self.update_request(text)
+        if not generic and (not request or request[1] != {'next_step'}):
+            return None
+        subject = '' if generic else request[0]
+        matches = self.goal_candidates(job, subject)
+        if not matches:
+            # A practice schedule can describe the goal without repeating its
+            # stored title, e.g. “自学吉他隔日练习安排”.
+            alias = re.sub(r'(?:隔日|隔天|每天|每日|每周)?(?:练习|训练|学习)(?:安排|计划|方案)$', '', subject)
+            if alias != subject and len(alias) >= 3:
+                matches = self.goal_candidates(job, alias)
+        value = text[change.end():].strip()
+        # A second edit or action should follow the ordinary multi-tool path.
+        if not value or re.search(
+            r'[。；;，,\n]\s*(?:(?:并且|然后|同时|另外|并|再|请|帮我)\s*)*'
+            r'(?:修改|更新|调整|更改|把|将|设置|安排|创建|取消|暂停|恢复|调用|提醒我)',
+            unquoted(value),
+        ):
+            return None
+        return matches, value, bool(subject)
+
+    def step_edit_request(self, job):
+        if not GOAL_EDIT_RETRY.fullmatch(job['input'].strip()):
+            return self.explicit_step_edit(job)
+        prior, _ = self.previous_chat_turn(job)
+        if not prior:
+            return None
+        previous_job = self.g.require('jobs', prior['job_id'])
+        if previous_job['status'] not in {'failed', 'timed_out', 'succeeded'}:
+            return None
+        if self.g.db.one(
+            "SELECT 1 FROM tool_calls WHERE job_id=? AND name='update_goal' AND json_extract(result,'$.id') IS NOT NULL",
+            (prior['job_id'],),
+        ):
+            return None
+        return self.explicit_step_edit({**job, 'input': prior['content']})
+
+    def goal_edit_question(self, matches):
+        if len(matches) == 1:
+            return f"要更新目标「{matches[0]['title']}」吗？回复「是的」即可应用刚才的修改。"
+        if matches:
+            titles = '、'.join(f"「{row['title']}」" for row in matches)
+            return f'请回复要修改的目标名称。可选目标有 {titles}。'
+        return '请回复要修改的目标名称。'
+
     def clarified_edit(self, job):
         # Only a reply to the immediately preceding clarification can finish
         # that edit. Use the original field values from the tool receipt.
         prior = self.g.db.one(
-            "SELECT m.job_id,m.role FROM messages m WHERE m.session_id=? AND m.rowid < "
+            "SELECT m.job_id,m.role,m.content FROM messages m WHERE m.session_id=? AND m.rowid < "
             "(SELECT rowid FROM messages WHERE job_id=? AND role='user' LIMIT 1) ORDER BY m.rowid DESC LIMIT 1",
             (job['session_id'], job['id']))
         if not prior or prior['role'] != 'assistant':
@@ -447,7 +573,13 @@ class Agent:
         if result.get('status') != 'needs_clarification':
             return None
         answer = job['input'].strip().strip('。！! “”「」"')
-        choices = [r for r in result['matches'] if answer in (r['title'], r['id'])]
+        candidates = result['matches']
+        if GOAL_EDIT_CONFIRMATION.fullmatch(answer):
+            choices = candidates if len(candidates) == 1 and prior['content'] == self.goal_edit_question(candidates) else []
+        else:
+            choices = match_goal_names(candidates, answer)
+            if not candidates and goal_title_key(answer):
+                choices = match_goal_names(self.goal_candidates(job, answer), answer)
         if len(choices) == 1:
             return {**json.loads(receipt['arguments']), 'id': choices[0]['id']}
         return None
@@ -704,18 +836,29 @@ class Agent:
             result = self.g.record("memory", {**arguments, "enabled": True, "source_job_id": job["id"]})
         elif name == "create_goal":
             text = job["input"].strip()
-            if not self.authorized_goal_save(text):
-                raise ValueError("当前指令没有明确授权创建目标")
             existing=self.g.db.one("SELECT result FROM tool_calls WHERE job_id=? AND name='create_goal' AND json_extract(result,'$.error') IS NULL",(job['id'],))
             if existing:
                 return json.loads(existing['result'])
-            result = self.g.record("goal", {**arguments, "state": "active", "source_job_id": job["id"]})
+            draft = self.confirmed_goal_draft(job)
+            if draft is not None or self.authorized_goal_save(text):
+                result = self.g.record("goal", {**(draft if draft is not None else arguments), "state": "active", "source_job_id": job["id"]})
+            elif self.goal_draft_mode(job) == 'details' and all(value.strip() for value in arguments.values()):
+                result = {'status': 'goal_draft', 'draft': arguments}
+            else:
+                raise ValueError("当前指令没有明确授权创建目标")
         elif name == "update_goal":
             request = self.update_request(job['input'])
-            if request is None:
+            step = self.step_edit_request(job)
+            needs_selection = False
+            if step and arguments == {'next_step': step[1]}:
+                matches = step[0]
+                if not matches:
+                    matches = self.goal_candidates({**job, 'input': '目标'}, '')
+                    needs_selection = True
+            elif request is None:
                 if self.clarified_edit(job) != arguments:
                     raise ValueError('当前指令没有明确授权修改目标')
-                subject = arguments['id']
+                matches = self.edit_targets(job, arguments['id'])
             else:
                 subject, allowed = request
                 fields = set(arguments) & {'body', 'next_step'}
@@ -723,8 +866,8 @@ class Agent:
                     fields.add(arguments['state'])
                 if not fields or fields - allowed:
                     raise ValueError('当前请求没有授权这些目标字段')
-            matches = self.edit_targets(job, subject)
-            if len(matches) != 1:
+                matches = self.edit_targets(job, subject)
+            if needs_selection or len(matches) != 1:
                 result = clarify(matches, '修改的目标')
             else:
                 identity = matches[0]['id']
@@ -807,6 +950,15 @@ class Agent:
             if result.get('status') == 'needs_clarification':
                 return '该目标已不可用，请重新选择目标。'
             return f"已更新目标「{result['payload']['title']}」。"
+        if draft := self.confirmed_goal_draft(job):
+            result = await self.call_tool(job, config, 'create_goal', draft)
+            return f"已保存目标「{result['payload']['title']}」。"
+        if job['kind'] == 'chat' and not job['task_id'] and (edit := self.step_edit_request(job)):
+            result = await self.call_tool(job, config, 'update_goal', {'next_step': edit[1]})
+            if result.get('status') == 'needs_clarification':
+                return self.goal_edit_question(result['matches'])
+            payload = result['payload']
+            return f"已更新目标「{payload['title']}」的下一步。\n\n{payload['next_step']}"
         checked, schedule = None, None
         if job["kind"] in {"heartbeat", "recurring", "once", "ideas", "draft", "feed"}:
             checked = await self.call_tool(job, config, "check_updates", {})
@@ -836,7 +988,7 @@ class Agent:
             "普通回复不展示内部哈希、调用 ID 和 Unix 时间；时间用用户可读的当地日期表示。"
             "不要在普通回复复述内部字段名和枚举值。公开来源的 published_at 是发布时间，checked_at 是本次读取时间。"
             "目标分类只帮助开始讨论，必须等用户明确要求保存才调用 create_goal。解封必须调用真实工具，重名先澄清。"
-            "用户直接要求修改就调用 update_goal，当前目标可省略 id。按目标名称、所选引用或会话定位，无需用户提供 ID 或再次授权。用户说“修改”且前文已有明确改法时直接执行；缺少新内容时只问要改成什么。遇到 needs_clarification 用名称询问对象。保持进行中时省略 state，只有明确完成、暂停、恢复时才能传对应状态。"
+            "用户直接要求修改就调用 update_goal，当前目标可省略 id。按目标名称、所选引用或会话定位，无需用户提供 ID 或再次授权。用户说“修改”且前文已有明确改法时直接执行；缺少新内容时只问要改成什么。遇到 needs_clarification 用名称询问对象。遇到工具拒绝时如实说明错误，目标修改没有可切换的权限设定。保持进行中时省略 state，只有明确完成、暂停、恢复时才能传对应状态。"
             "工具返回官方 RSS 时，可以说明已读取该订阅；只读取 RSS 摘要时，说明尚未阅读全文，保持来源链接。"
             f"\n当前时间：{datetime.fromtimestamp(self.g.clock(), ZoneInfo(config['timezone'])).isoformat()}；Unix 秒：{self.g.clock()}。"
             f"\n当前有效状态：{packed(context)}。只将有效 memories 作为个人记忆使用。"
@@ -845,6 +997,11 @@ class Agent:
         )
         if checked:
             messages[-1]["content"] += "\n实际 Skill 检查结果：" + packed(checked)
+        goal_draft_mode = self.goal_draft_mode(job)
+        if goal_draft_mode == 'opening':
+            system += '\n用户刚开始描述新目标。只问一个必要问题，不调用保存工具。'
+        elif goal_draft_mode == 'details':
+            system += '\n用户正在补充上一轮的新目标。根据两轮用户消息调用 create_goal 提交草案，工具会先展示草案等待确认。'
         available_tools = [entry for entry in TOOLS if entry["name"] == "check_updates"] if job["kind"] in {"feed", "ideas"} else TOOLS
         if job['task_id']:
             system += "\n当前任务已到期。执行已保存的指令，直接写本次投递给用户的正文。聊天记录只作背景，无需再安排任务或确认时间。"
@@ -876,6 +1033,8 @@ class Agent:
         if re.search(r'[“「\"].*[”」\"]', text):
             text = re.sub(r'[“「\"].*?[”」\"]', '', text)
         if self.authorized_goal_save(text):required_tools.add('create_goal')
+        if goal_draft_mode == 'details':
+            required_tools.add('create_goal')
         reminder = self.reminder_request(job, config) if text else None
         timing_error = None
         if reminder:
@@ -951,6 +1110,8 @@ class Agent:
                             raise ValueError("请将公开网页搜索作为独立请求，或检查搜索设置")
                         searched = True
                     value = await self.call_tool(job, config, call["name"], call["input"])
+                    if call["name"] == "create_goal" and value.get("status") == "goal_draft":
+                        return self.goal_draft_message(value["draft"])
                     returns.append({"type": "tool_result", "tool_use_id": call["id"], "content": packed(value)})
                     if call["name"] == "web_search":
                         search_note = f"来源（{value['provider']} 摘要，未读取原文）：\n\n" + search_sources(value) if value["results"] else "联网搜索未返回可用来源。"
