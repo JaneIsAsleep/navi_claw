@@ -119,7 +119,10 @@ class Database:
         return conn
 
     @contextmanager
-    def transaction(self):
+    def transaction(self, connection=None):
+        if connection is not None:
+            yield connection
+            return
         conn = self.connect()
         try:
             conn.execute("BEGIN IMMEDIATE")
@@ -131,12 +134,14 @@ class Database:
         finally:
             conn.close()
 
-    def all(self, sql: str, params=()):
+    def all(self, sql: str, params=(), *, conn=None):
+        if conn is not None:
+            return [dict(row) for row in conn.execute(sql, params).fetchall()]
         with closing(self.connect()) as conn:
             return [dict(row) for row in conn.execute(sql, params).fetchall()]
 
-    def one(self, sql: str, params=()):
-        rows = self.all(sql, params)
+    def one(self, sql: str, params=(), *, conn=None):
+        rows = self.all(sql, params, conn=conn)
         return rows[0] if rows else None
 
     def execute(self, sql: str, params=()):
@@ -144,5 +149,6 @@ class Database:
             cursor = conn.execute(sql, params)
             return cursor.rowcount
 
-    def event(self, kind: str, data: dict, job_id=None, now=None):
-        self.execute("INSERT INTO audit(job_id,kind,data,created) VALUES(?,?,?,?)", (job_id, kind, packed(data), time.time() if now is None else now))
+    def event(self, kind: str, data: dict, job_id=None, now=None, *, conn=None):
+        with self.transaction(conn) as write:
+            write.execute("INSERT INTO audit(job_id,kind,data,created) VALUES(?,?,?,?)", (job_id, kind, packed(data), time.time() if now is None else now))

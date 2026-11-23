@@ -243,7 +243,9 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
     @app.post("/api/actions/{identity}/decision")
     async def decide(identity: str, request: Request):
         values = await body(request)
-        return gateway.decide(identity, values.get("decision"), values.get("content_hash"))
+        if set(values) != {'decision', 'content_hash'}:
+            raise ValueError('审批只接受决定和当前提案的校验值。')
+        return gateway.decide(identity, values['decision'], values['content_hash'])
 
     @app.post("/api/notifications/read")
     def read_notifications():

@@ -7,7 +7,7 @@ import tempfile
 from zoneinfo import ZoneInfo
 
 from navi.gateway import Gateway
-from .live import LiveGateway, ROOT, STATE_ROOT, wait, output_directory, summarize
+from .live import LiveGateway, ROOT, STATE_ROOT, approve_item_edit, configure_live_gateway, wait, output_directory, summarize
 
 
 async def scheduled_job(g, schedule):
@@ -28,9 +28,7 @@ async def main():
         return 2
     directory = Path(tempfile.mkdtemp(prefix="refinement-live-", dir=STATE_ROOT))
     g = LiveGateway(ROOT, directory)
-    g.owner = owner
-    g.settings.api_key = lambda: key
-    g.settings.update(owner.settings.current())
+    configure_live_gateway(g, owner, key)
     g.settings.update({"notification_policy": "strict"})
     g.skills.save_items([{"id": "outline", "title": "整理验收报告提纲", "body": "独立测试事项", "priority": 3, "done": False, "due_at": None}])
     report = {"evidence_type": "live-deepseek-product-refinement", "timestamp": datetime.now(timezone.utc).isoformat(), "model": g.settings.current()["model"], "checks": [], "status": "running", "week_trial": "pending-real-use"}
@@ -52,8 +50,10 @@ async def main():
         updated = g.chat(f"请调用 update_goal 修改目标 {goal['id']}，下一步准确保存为：列出三个论点。保持进行中，不设置提醒。", topic["id"])
         jobs.append(updated["id"])
         await wait(g, updated["id"])
+        assert g.record_detail(goal['id'])['payload'] == goal['payload']
+        approve_item_edit(g, updated, goal['id'])
         assert json.loads(g.require("records", goal["id"])["payload"])["next_step"] == "列出三个论点"
-        report["checks"].append("真实模型工具修改目标下一步，持久内容与回执核对")
+        report["checks"].append("目标下一步修改经审批后持久生效")
 
         request = g.chat(f"请调用 schedule_task，为已保存目标 {goal['id']} 设置单次提醒，标题为“报告测试提醒”，提醒我列出三个论点。kind 为 once，next_due 为 {g.clock() + 3600:.3f}，归属本对话。只设一个提醒。", topic["id"])
         jobs.append(request["id"])

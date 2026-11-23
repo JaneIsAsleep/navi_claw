@@ -128,6 +128,12 @@
 .actionCard { align-self: stretch; margin: 16px 0; padding: 16px 20px; border: 1px solid #cbd6dd; border-radius: var(--radius); background: white; }
 .actionCard > p { font-size: 14px; }
 .actionHeading { display: flex; gap: 12px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.editTarget { overflow-wrap: anywhere; }
+.editChanges { margin: 12px 0; }
+.editChanges > div { padding: 8px 0; border-top: 1px solid #e3e8eb; }
+.editChanges dt { font-weight: 600; }
+.editChanges dd { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.editChanges dd span { display: inline-block; color: var(--muted); margin-right: 10px; }
 .badge { color: var(--accent); background: #edf1f3; border-radius: 8px; font-size: 13px; padding: 4px 8px; }
 .approvalButtons { margin-top: 16px; }
 .error, .notice, .connection, .archiveBanner { padding: 10px 24px; font-size: 14px; background: #f3f6f8; flex-shrink: 0; overflow-wrap: anywhere; }

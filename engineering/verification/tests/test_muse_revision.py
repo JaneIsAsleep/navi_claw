@@ -341,10 +341,13 @@ async def test_natural_authorization_corrects_actual_goal_id_and_cancel_needs_un
     request=g.chat('取消目标：阅读目标')
     ambiguous=await Agent(g).call_tool(request,g.job_config(),'cancel_goal',{'title':'阅读目标'})
     assert ambiguous['status']=='needs_clarification'
-    assert len(ambiguous['matches'])==2
+    assert len(ambiguous['candidates'])==2
     request=g.chat('取消目标 '+goal['id'])
     result=await Agent(g).call_tool(request,g.job_config(),'cancel_goal',{'id':goal['id']})
-    assert result['status']=='cancelled'
+    assert result['status']=='pending_approval' and result['target_id']==goal['id']
+    from test_item_edits import review
+    review(g, request)
+    assert g.record_detail(goal['id'])['payload']['state']=='cancelled'
     assert g.record_detail(duplicate['id'])['payload']['state']=='active'
 
 

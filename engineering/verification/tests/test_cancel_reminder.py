@@ -5,6 +5,7 @@ from navi.agent import cancel_tool
 from navi.gateway import Gateway
 from navi.web import create_app
 from test_gateway import Clock, ROOT
+from test_item_edits import edit_model
 
 
 class NoModel:
@@ -28,7 +29,12 @@ async def test_chat_cancels_reminder_and_next_trigger_through_web(tmp_path, text
         assert response.status_code == 200
         await gateway.run_one()
         job = gateway.require("jobs", response.json()["id"])
-        assert job["status"] == "succeeded" and "已取消站内提醒「喝水提醒」" in job["result"]
+        assert job["status"] == "succeeded" and "已准备审批" in job["result"]
+        action = gateway.db.one('SELECT * FROM actions WHERE job_id=?', (job['id'],))
+        assert action['target'] == reminder['id'] and gateway.require('schedules', reminder['id'])['enabled']
+        applied = await web.post(f"/api/actions/{action['id']}/decision", json={'decision': 'approve', 'content_hash': action['content_hash']})
+        assert applied.status_code == 200
+        gateway.deliver()
         state = (await web.get("/api/state")).json()
         row = next(row for row in state["schedules"] if row["id"] == reminder["id"])
         assert row["state"] == "cancelled" and not row["enabled"]
@@ -39,17 +45,19 @@ async def test_chat_cancels_reminder_and_next_trigger_through_web(tmp_path, text
 
 
 @pytest.mark.parametrize(("text", "message"), [
-    ("取消喝水提醒", "匹配到多个提醒"),
-    ("取消不存在的提醒", "没有找到对应的提醒"),
+    ("取消喝水提醒", "找到多条可能的提醒"),
+    ("取消不存在的提醒", "没有找到符合描述的提醒"),
 ])
 async def test_ambiguous_or_missing_reminder_does_not_claim_success(tmp_path, text, message):
     gateway = Gateway(ROOT, tmp_path, NoModel(), Clock())
     schedule(gateway, "喝水提醒")
+    if '不存在' in text:
+        gateway.model = edit_model('reminder', '不存在的提醒', [])
     schedule(gateway, "喝水提醒")
     job = gateway.chat(text)
     await gateway.run_one()
     result = gateway.require("jobs", job["id"])["result"]
-    assert message in result and "未取消任何提醒" in result
+    assert message in result and not gateway.snapshot()['actions']
     assert all(row["enabled"] and row["state"] == "active" for row in gateway.snapshot()["schedules"])
 
 

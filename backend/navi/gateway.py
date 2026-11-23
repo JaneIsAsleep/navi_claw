@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 from .config import Settings
 from .feeds import PublicFeeds
+from .item_edits import ITEM_EDIT, apply_item_edit, prepare_item_edit
 from .model import AgentError, DeepSeek
 from .reminder_time import calendar_occurrences, finite_number, has_time_reply, local_timestamp, timezone_for
 from .skills import BriefingSkills
@@ -64,10 +65,10 @@ class Gateway:
         if self.db.migrated_v5:
             self.restore_daily(budget_changed=True, migration=True)
 
-    def require(self, table, identity):
+    def require(self, table, identity, *, conn=None):
         if table not in {"sessions", "jobs", "schedules", "actions", "records", "tasks"}:
             raise ValueError("无效的数据类型")
-        row = self.db.one(f"SELECT * FROM {table} WHERE id=?", (identity,))
+        row = self.db.one(f"SELECT * FROM {table} WHERE id=?", (identity,), conn=conn)
         if row is None:
             raise ValueError("记录不存在")
         return row
@@ -431,7 +432,7 @@ class Gateway:
             conn.execute("UPDATE sessions SET updated=? WHERE id=?", (now, session_id))
         return self.require("jobs", identity)
 
-    def record(self, kind, payload, identity=None):
+    def record(self, kind, payload, identity=None, *, conn=None, stop_ids=None):
         if kind not in RECORD_KINDS or not isinstance(payload, dict):
             raise ValueError("无效的条目")
         title = payload.get("title", "")
@@ -448,7 +449,7 @@ class Gateway:
             raise ValueError("无效的目标状态")
         if kind == "memory" and not isinstance(payload.get("enabled", True), bool):
             raise ValueError("记忆启用状态无效")
-        previous = self.db.one("SELECT * FROM records WHERE id=?", (identity,)) if identity else None
+        previous = self.db.one("SELECT * FROM records WHERE id=?", (identity,), conn=conn) if identity else None
         if identity:
             if not previous and kind != "feed":
                 raise ValueError("条目不存在")
@@ -457,14 +458,17 @@ class Gateway:
         is_new = previous is None
         identity, now = identity or uid(), self.clock()
         if kind == "goal":
+            old = json.loads(previous["payload"]) if previous else {}
+            if old.get("title") and title != old["title"] and payload.get("abstract") == old["title"][:60]:
+                payload["abstract"] = title[:60]
             payload.setdefault("abstract", title[:60])
-            if previous and payload.get("state") in {"completed", "cancelled"}:
-                return self.goal_state(identity, "complete" if payload["state"] == "completed" else "cancel", payload=payload)["goal"]
-            if previous and json.loads(previous["payload"]).get("state") in {"completed", "cancelled"} and payload.get("state") != json.loads(previous["payload"]).get("state"):
-                if json.loads(previous["payload"]).get("state") == "completed" and payload.get("state") == "active":
-                    return self.goal_state(identity, "reactivate", payload=payload)["goal"]
+            if previous and payload.get("state") in {"completed", "cancelled"} and payload["state"] != old.get("state"):
+                return self.goal_state(identity, "complete" if payload["state"] == "completed" else "cancel", payload=payload, conn=conn, stop_ids=stop_ids)["goal"]
+            if old.get("state") in {"completed", "cancelled"} and payload.get("state") != old["state"]:
+                if old["state"] == "completed" and payload.get("state") == "active":
+                    return self.goal_state(identity, "reactivate", payload=payload, conn=conn, stop_ids=stop_ids)["goal"]
                 raise APIError("已取消目标不能恢复")
-        with self.db.transaction() as conn:
+        with self.db.transaction(conn) as conn:
             job_id = payload.get("source_job_id") or payload.get("job_id")
             if job_id and is_new:
                 job = conn.execute("SELECT status,session_id FROM jobs WHERE id=?", (job_id,)).fetchone()
@@ -475,8 +479,8 @@ class Gateway:
             conn.execute("INSERT INTO records VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,updated=excluded.updated", (identity, kind, packed(payload), now, now))
             if kind == "memory":
                 conn.execute("UPDATE sessions SET summary='',summary_through=NULL")
-        self.db.event("record.saved", {"record_id": identity, "kind": kind, "state": payload.get("state"), "next_step": payload.get("next_step")}, job_id=job_id, now=now)
-        return {**self.require("records", identity), "payload": payload}
+            self.db.event("record.saved", {"record_id": identity, "kind": kind, "state": payload.get("state"), "next_step": payload.get("next_step")}, job_id=job_id, now=now, conn=conn)
+            return {**self.require("records", identity, conn=conn), "payload": payload}
 
     def delete_record(self, identity):
         row = self.require("records", identity)
@@ -540,23 +544,23 @@ class Gateway:
             raise ValueError("到期时间无效")
         return due
 
-    def edit_schedule(self, identity, values):
-        row, now = self.require("schedules", identity), self.clock()
-        task = self.require("tasks", row["task_id"])
+    def edit_schedule(self, identity, values, *, conn=None, stop_ids=None):
+        row, now = self.require("schedules", identity, conn=conn), self.clock()
+        task = self.require("tasks", row["task_id"], conn=conn)
         if values == {"operation": "remove_from_list"}:
             if task["state"] not in {"cancelled", "completed"} or row["enabled"]:
                 raise ValueError("请先取消提醒，再从列表移除")
-            with self.db.transaction() as conn:
-                removed = conn.execute(
+            with self.db.transaction(conn) as write:
+                removed = write.execute(
                     "UPDATE schedules SET removed_from_reminders=1 WHERE id=? AND removed_from_reminders=0",
                     (identity,),
                 )
                 if removed.rowcount:
-                    conn.execute(
+                    write.execute(
                         "INSERT INTO audit(kind,data,created) VALUES('schedule.removed_from_list',?,?)",
                         (packed({"schedule_id": identity, "task_id": row["task_id"]}), now),
                     )
-            return self.require("schedules", identity)
+            return self.require("schedules", identity, conn=conn)
         if task["state"] in {"cancelled", "completed"}:
             raise ValueError("已结束的任务不能恢复")
         if set(values) - {"title", "instruction", "interval_seconds", "next_due", "local_due", "timezone", "operation"}:
@@ -565,10 +569,13 @@ class Gateway:
         if operation and operation not in {"pause", "resume", "cancel", "complete"}:
             raise ValueError("无效的任务操作")
         if operation in {"cancel", "complete"}:
-            with self.db.transaction() as conn:
-                ids = self.terminate_work(conn, [row["task_id"]], [], "completed" if operation == "complete" else "cancelled", "追踪已结束")
-            self.stop_executions(ids)
-            return self.require("schedules", identity)
+            with self.db.transaction(conn) as write:
+                ids = self.terminate_work(write, [row["task_id"]], [], "completed" if operation == "complete" else "cancelled", "追踪已结束")
+            if stop_ids is None:
+                self.stop_executions(ids)
+            else:
+                stop_ids.extend(ids)
+            return self.require("schedules", identity, conn=conn)
         interval = values.get("interval_seconds", row["interval_seconds"])
         if row["kind"] != "once" and (not finite_number(interval) or interval < 1):
             raise ValueError("周期至少为 1 秒")
@@ -583,11 +590,11 @@ class Gateway:
             raise ValueError("任务标题或指令无效")
         state = {"pause": "paused", "resume": "active", "cancel": "cancelled"}.get(operation, task["state"])
         enabled = int(state == "active")
-        with self.db.transaction() as conn:
+        with self.db.transaction(conn) as conn:
             conn.execute("UPDATE tasks SET title=?,instruction=?,state=?,updated=? WHERE id=?", (title, instruction, state, now, row["task_id"]))
             conn.execute("UPDATE schedules SET interval_seconds=?,next_due=?,enabled=?,updated=?,calendar_timezone=? WHERE id=?", (interval, due, enabled, now, calendar_timezone, identity))
-        self.db.event("schedule.updated", {"schedule_id": identity, "task_id": row["task_id"], "operation": operation or "edit", "future_only": True}, now=now)
-        return self.require("schedules", identity)
+            self.db.event("schedule.updated", {"schedule_id": identity, "task_id": row["task_id"], "operation": operation or "edit", "future_only": True}, now=now, conn=conn)
+            return self.require("schedules", identity, conn=conn)
 
     def terminate_work(self, conn, task_ids, job_ids, state, reason):
         now = self.clock()
@@ -609,12 +616,12 @@ class Gateway:
             if execution and not execution.done():
                 execution.cancel()
 
-    def goal_state(self, identity, operation, payload=None):
+    def goal_state(self, identity, operation, payload=None, *, conn=None, stop_ids=None):
         if not isinstance(operation, str) or operation not in {'complete', 'cancel', 'reactivate'}:
             raise ValueError('目标操作无效')
         now, job_ids, tasks = self.clock(), [], []
-        with self.db.transaction() as conn:
-            row = conn.execute("SELECT * FROM records WHERE id=? AND kind='goal'", (identity,)).fetchone()
+        with self.db.transaction(conn) as write:
+            row = write.execute("SELECT * FROM records WHERE id=? AND kind='goal'", (identity,)).fetchone()
             if not row:
                 raise APIError('目标不存在', 404)
             old = json.loads(row['payload'])
@@ -628,20 +635,25 @@ class Gateway:
                 target = 'completed' if operation == 'complete' else 'cancelled'
                 if old.get('state') == 'cancelled' and target != 'cancelled':
                     raise APIError('已取消目标不能标记完成')
-                tasks = [dict(r) for r in conn.execute("SELECT id,title,state FROM tasks WHERE goal_id=?", (identity,))]
-                linked = [r[0] for r in conn.execute("SELECT id FROM jobs WHERE json_extract(config,'$.goal_id')=?", (identity,))]
-                job_ids = self.terminate_work(conn, [r['id'] for r in tasks], linked, target, '关联目标已结束')
+                tasks = [dict(r) for r in write.execute("SELECT id,title,state FROM tasks WHERE goal_id=?", (identity,))]
+                linked = [r[0] for r in write.execute("SELECT id FROM jobs WHERE json_extract(config,'$.goal_id')=?", (identity,))]
+                job_ids = self.terminate_work(write, [r['id'] for r in tasks], linked, target, '关联目标已结束')
                 current.update(state=target)
                 current.setdefault('completed_at' if target == 'completed' else 'cancelled_at', now)
-                for session in conn.execute("SELECT id,goal_setup_json FROM sessions WHERE json_extract(goal_setup_json,'$.saved_goal_id')=?", (identity,)).fetchall():
+                for session in write.execute("SELECT id,goal_setup_json FROM sessions WHERE json_extract(goal_setup_json,'$.saved_goal_id')=?", (identity,)).fetchall():
                     setup = json.loads(session['goal_setup_json'])
                     setup.update(status='closed', active_card_id=None, version=setup['version']+1)
                     setup.pop('followup', None)
-                    conn.execute('UPDATE sessions SET goal_setup_json=? WHERE id=?', (packed(setup), session['id']))
-            conn.execute("UPDATE records SET payload=?,updated=? WHERE id=?", (packed(current), now, identity))
-            conn.execute("INSERT INTO audit(kind,data,created) VALUES('goal.state',?,?)", (packed({'record_id': identity, 'operation': operation, 'task_ids': [r['id'] for r in tasks]}), now))
-        self.stop_executions(job_ids)
-        return {'goal': self.record_detail(identity), 'affected_tasks': [r['id'] for r in tasks], 'cancelled_jobs': job_ids, 'ending': False}
+                    write.execute('UPDATE sessions SET goal_setup_json=? WHERE id=?', (packed(setup), session['id']))
+            write.execute("UPDATE records SET payload=?,updated=? WHERE id=?", (packed(current), now, identity))
+            write.execute("INSERT INTO audit(kind,data,created) VALUES('goal.state',?,?)", (packed({'record_id': identity, 'operation': operation, 'task_ids': [r['id'] for r in tasks]}), now))
+            goal = {**self.require('records', identity, conn=write), 'payload': current}
+        if stop_ids is None:
+            self.stop_executions(job_ids)
+        else:
+            stop_ids.extend(job_ids)
+        return {'goal': self.record_detail(identity) if conn is None else goal,
+                'affected_tasks': [r['id'] for r in tasks], 'cancelled_jobs': job_ids, 'ending': False}
 
     def cancel_tracking(self, identity):
         schedule = self.db.one('SELECT * FROM schedules WHERE id=? OR task_id=?', (identity, identity))
@@ -898,9 +910,17 @@ class Gateway:
         if not isinstance(request_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,100}", request_id):
             raise ValueError("请求标识无效")
 
-    def propose(self, job_id, kind, title, target, body):
-        if kind not in {"notification", "export"}:
-            raise ValueError("当前仅支持站内提醒和审批后的本机文档导出")
+    def propose_item_edit(self, job, kind, target, edits, *, anchor=None):
+        with self.db.transaction() as conn:
+            title, body = prepare_item_edit(self, kind, target, edits,
+                                            job['created'] if anchor is None else anchor,
+                                            json.loads(job['config'])['timezone'], conn)
+            title = ('修改目标「' if kind == 'goal' else '修改提醒「') + title + '」'
+            return self.propose(job['id'], ITEM_EDIT, title, target, body, conn=conn)
+
+    def propose(self, job_id, kind, title, target, body, *, conn=None):
+        if kind not in {"notification", "export"} and not (kind == ITEM_EDIT and conn is not None):
+            raise ValueError("不支持的审批动作")
         if not all(isinstance(value, str) and value.strip() for value in (title, target, body)) or len(body) > 100000:
             raise ValueError("动作内容无效")
         if kind == "notification" and target != "inbox":
@@ -910,26 +930,31 @@ class Gateway:
         digest, now = content_hash(kind, title, target, body), self.clock()
         legacy_digest = hashlib.sha256(packed([kind, title, target, body]).encode()).hexdigest()
         identity = uid()
-        with self.db.transaction() as conn:
-            job = conn.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+        with self.db.transaction(conn) as write:
+            job = write.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
             if not job or job["status"] == "cancelled":
                 raise ValueError("所属工作已取消，不能提出行动")
+            if kind == ITEM_EDIT and (job['kind'] != 'chat' or job['task_id'] or job['trigger_key'].startswith('idea-start:')):
+                raise ValueError('只有用户对话可以提出记录修改。')
             # Existing approvals retain their pre-migration hash. Retried old work
             # must find that same action, including an edited original version.
-            previous = conn.execute("SELECT a.* FROM actions a WHERE a.job_id=? AND (a.content_hash=? OR (a.version=1 AND a.content_hash=?) OR EXISTS(SELECT 1 FROM action_versions v WHERE v.action_id=a.id AND (json_extract(v.payload,'$.content_hash')=? OR (v.version=1 AND json_extract(v.payload,'$.content_hash')=?))))", (job_id, digest, legacy_digest, digest, legacy_digest)).fetchone()
+            previous = write.execute("SELECT a.* FROM actions a WHERE a.job_id=? AND (a.content_hash=? OR (a.version=1 AND a.content_hash=?) OR EXISTS(SELECT 1 FROM action_versions v WHERE v.action_id=a.id AND (json_extract(v.payload,'$.content_hash')=? OR (v.version=1 AND json_extract(v.payload,'$.content_hash')=?))))", (job_id, digest, legacy_digest, digest, legacy_digest)).fetchone()
             if previous:
                 return dict(previous)
-            conn.execute("INSERT INTO actions(id,job_id,kind,title,target,body,status,content_hash,basis,created,updated,source_session_id) VALUES(?,?,?,?,?,?,'pending',?,'',?,?,?)", (identity, job_id, kind, title, target, body, digest, now, now, job["session_id"]))
-        self.db.event("action.proposed", {"action_id": identity, "content_hash": digest, "kind": kind}, job_id, now)
-        job = self.require("jobs", job_id)
+            if kind == ITEM_EDIT and write.execute("SELECT 1 FROM actions WHERE job_id=? AND kind=?", (job_id, kind)).fetchone():
+                raise ValueError('本轮已经有一项修改提案，请在对话中单独发起下一项。')
+            write.execute("INSERT INTO actions(id,job_id,kind,title,target,body,status,content_hash,basis,created,updated,source_session_id) VALUES(?,?,?,?,?,?,'pending',?,'',?,?,?)", (identity, job_id, kind, title, target, body, digest, now, now, job["session_id"]))
+            self.db.event("action.proposed", {"action_id": identity, "content_hash": digest, "kind": kind}, job_id, now, conn=write)
         if kind == "notification" and json.loads(job["config"])["notification_policy"] == "daily":
             self.decide(identity, "approve", digest, actor="policy", basis="用户已授权普通站内提醒自动发送；日常策略")
-        return self.require("actions", identity)
+        return self.require("actions", identity, conn=conn)
 
     def edit_action(self, identity, values):
         row = self.require("actions", identity)
         if row["status"] != "pending":
             raise ValueError("仅可编辑待审批动作")
+        if row['kind'] == ITEM_EDIT:
+            raise ValueError('请拒绝此提案并在对话中发起新的修改。')
         if set(values) - {"title", "target", "body"}:
             raise ValueError("不支持的动作字段")
         title, target, body = [values.get(key, row[key]) for key in ("title", "target", "body")]
@@ -947,11 +972,19 @@ class Gateway:
         return self.require("actions", identity)
 
     def decide(self, identity, decision, digest, *, actor="local-user", basis="用户逐条审批"):
-        if decision not in {"approve", "reject"}:
+        if decision not in ("approve", "reject") or not isinstance(digest, str):
             raise ValueError("审批决定无效")
         now = self.clock()
         with self.db.transaction() as conn:
             row = conn.execute("SELECT * FROM actions WHERE id=?", (identity,)).fetchone()
+            if row and row['kind'] == ITEM_EDIT:
+                if actor != 'local-user':
+                    raise ValueError('修改记录必须由用户逐条审批。')
+                if row['content_hash'] == digest and conn.execute(
+                    'SELECT 1 FROM approvals WHERE action_id=? AND decision=? AND content_hash=? AND actor=?',
+                    (identity, decision, digest, actor),
+                ).fetchone():
+                    return dict(row)
             if not row or row["status"] != "pending" or row["content_hash"] != digest:
                 raise ValueError("动作内容或状态已经变化，请刷新后审批")
             status = "approved" if decision == "approve" else "rejected"
@@ -970,17 +1003,24 @@ class Gateway:
     def deliver(self):
         for row in self.db.all("SELECT * FROM outbox WHERE state='pending' ORDER BY created"):
             payload, now = json.loads(row["payload"]), self.clock()
+            stop_ids, action = [], None
             try:
                 with self.db.transaction() as conn:
                     action = conn.execute("SELECT * FROM actions WHERE id=?", (row["action_id"],)).fetchone()
                     box = conn.execute("SELECT * FROM outbox WHERE id=?", (row["id"],)).fetchone()
-                    approval = conn.execute("SELECT id FROM approvals WHERE action_id=? AND decision='approve' AND content_hash=?", (row["action_id"], payload["content_hash"])).fetchone()
+                    approval = conn.execute("SELECT actor FROM approvals WHERE action_id=? AND decision='approve' AND content_hash=?", (row["action_id"], payload["content_hash"])).fetchone()
                     if box["state"] != "pending":
                         continue
                     if not approval or action["status"] != "approved" or action["content_hash"] != payload["content_hash"]:
                         raise ValueError("批准记录与投递内容不一致")
                     target = "inbox"
-                    if payload["kind"] == "notification":
+                    if action['kind'] == ITEM_EDIT:
+                        digest = content_hash(payload['kind'], payload['title'], payload['target'], payload['body'], payload['version'])
+                        if payload['kind'] != ITEM_EDIT or approval['actor'] != 'local-user' or digest != action['content_hash']:
+                            raise ValueError('批准记录与修改内容不一致。')
+                        target = payload['target']
+                        apply_item_edit(self, conn, target, payload['body'], stop_ids)
+                    elif payload["kind"] == "notification":
                         conn.execute("INSERT INTO notifications(id,outbox_id,title,body,unread,created) VALUES(?,?,?,?,1,?)", (uid(), row["id"], payload["title"], payload["body"], now))
                         origin_id = action["source_session_id"]
                         if origin_id:
@@ -993,7 +1033,7 @@ class Gateway:
                             conn.execute("INSERT INTO messages(id,session_id,role,content,job_id,created,outbox_id,origin_session_id,unread) VALUES(?,?,'assistant',?,?,?,?,?,1)", (uid(), destination, content, payload["job_id"], now, row["id"], origin_id))
                             conn.execute("UPDATE sessions SET updated=? WHERE id=?", (now, destination))
                             target = destination
-                    else:
+                    elif payload['kind'] == 'export':
                         folder = self.directory / "exports"
                         folder.mkdir(exist_ok=True)
                         path = folder / f"{payload['id']}_{payload['target']}"
@@ -1015,12 +1055,22 @@ class Gateway:
                         if linked and linked["goal_id"]:
                             artifact["goal_ids"] = list(set(artifact.get("goal_ids", []) + [linked["goal_id"]]))
                         conn.execute("INSERT OR IGNORE INTO records VALUES(?,?,?,?,?)", (f"artifact-{payload['id']}", "artifact", packed(artifact), now, now))
+                    else:
+                        raise ValueError('不支持的动作类型。')
                     delivery_id = uid()
                     conn.execute("INSERT INTO deliveries VALUES(?,?,?,?,?)", (delivery_id, row["id"], row["action_id"], target, now))
                     conn.execute("UPDATE outbox SET state='delivered',updated=? WHERE id=?", (now, row["id"]))
                     conn.execute("UPDATE actions SET status='delivered',updated=? WHERE id=?", (now, row["action_id"]))
                     conn.execute("INSERT INTO audit(job_id,kind,data,created) VALUES(?,'delivery.completed',?,?)", (payload["job_id"], packed({"action_id": row["action_id"], "outbox_id": row["id"], "delivery_id": delivery_id, "target": target}), now))
+                self.stop_executions(stop_ids)
             except (OSError, ValueError) as error:
+                if action and action['kind'] == ITEM_EDIT and isinstance(error, ValueError):
+                    with self.db.transaction() as conn:
+                        changed = conn.execute("UPDATE outbox SET state='cancelled',error=?,updated=? WHERE id=? AND state='pending'", (str(error), now, row['id'])).rowcount
+                        if changed:
+                            conn.execute("UPDATE actions SET status='invalidated',basis=?,updated=? WHERE id=?", (str(error), now, row['action_id']))
+                            self.db.event('action.invalidated', {'action_id': row['action_id'], 'target': action['target']}, action['job_id'], now, conn=conn)
+                    continue
                 self.db.execute("UPDATE outbox SET state='uncertain',error=?,updated=? WHERE id=?", (str(error), now, row["id"]))
                 self.db.event("delivery.uncertain", {"outbox_id": row["id"], "reason": str(error)}, payload["job_id"], now)
 

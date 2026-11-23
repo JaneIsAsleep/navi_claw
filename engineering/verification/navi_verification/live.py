@@ -50,6 +50,15 @@ class LiveGateway(Gateway):
         self.owner.finish_usage(identity, reply)
 
 
+def configure_live_gateway(gateway, owner, key):
+    gateway.owner = owner
+    config = owner.settings.current()
+    # Custom URLs are registered in the isolated database with its own ID.
+    config.pop('endpoint_id', None)
+    gateway.settings.update(config)
+    gateway.settings.api_key = lambda _config=None: key
+
+
 async def wait(gateway, job_id):
     for _ in range(1200):
         job = gateway.require("jobs", job_id)
@@ -62,6 +71,14 @@ async def wait(gateway, job_id):
     raise RuntimeError("真实验收等待超时，作业已取消")
 
 
+def approve_item_edit(gateway, job, target):
+    action = gateway.db.one("SELECT * FROM actions WHERE job_id=? AND kind='item_edit'", (job['id'],))
+    assert action and action['status'] == 'pending' and action['target'] == target
+    gateway.decide(action['id'], 'approve', action['content_hash'])
+    gateway.deliver()
+    assert gateway.require('actions', action['id'])['status'] == 'delivered'
+
+
 async def main():
     output_dir = output_directory()
     existing = Gateway(ROOT, ROOT / "data")
@@ -71,9 +88,7 @@ async def main():
         return 2
     directory = Path(tempfile.mkdtemp(prefix="live-", dir=STATE_ROOT))
     gateway = LiveGateway(ROOT, directory)
-    gateway.owner = existing
-    gateway.settings.api_key = lambda: api_key
-    gateway.settings.update(existing.settings.current())
+    configure_live_gateway(gateway, existing, api_key)
     gateway.settings.update({"notification_policy": "strict"})
     items = json.loads((ROOT / "engineering/verification/fixtures/check_items.json").read_text())
     for item in items:

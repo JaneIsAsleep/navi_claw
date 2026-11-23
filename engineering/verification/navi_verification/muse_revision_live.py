@@ -7,7 +7,7 @@ import tempfile
 
 from navi.gateway import Gateway
 from navi.storage import packed
-from .live import LiveGateway, ROOT, STATE_ROOT, wait, output_directory
+from .live import LiveGateway, ROOT, STATE_ROOT, approve_item_edit, configure_live_gateway, wait, output_directory
 
 V2_PHASE = 5
 
@@ -16,9 +16,7 @@ async def run(owner, key, stage=2, output_dir=None):
     output_dir = output_dir or output_directory()
     directory = Path(tempfile.mkdtemp(prefix='muse-revision-live-', dir=STATE_ROOT))
     g = LiveGateway(ROOT, directory)
-    g.owner = owner
-    g.settings.api_key = lambda: key
-    g.settings.update(owner.settings.current())
+    configure_live_gateway(g, owner, key)
     g.settings.update({'feed_brief': '关注 Python 官方更新，以及本机阅读材料整理事项。', 'notification_policy': 'strict'})
     g.skills.save_items([{'id':'reading','title':'整理中性阅读材料','body':'准备一个阅读笔记模板。','priority':3,'done':False}])
     g.feeds.follow('python')
@@ -87,9 +85,10 @@ async def run(owner, key, stage=2, output_dir=None):
                 assert g.require('tasks',task['id'])['state']=='completed'
                 cancel=g.chat('请取消目标 '+actual+'，仅取消这一个目标。',begin['session_id'])
                 jobs.append(cancel['id']);await wait(g,cancel['id'])
+                assert g.record_detail(actual)['payload']['state']=='active'
+                approve_item_edit(g, cancel, actual)
                 assert g.record_detail(actual)['payload']['state']=='cancelled'
-                assert any(t['name']=='cancel_goal' and t['result'].get('status')=='cancelled' for t in g.evidence(cancel['id'])['tools'])
-                report['checks'].append(category+' 真实可点击选项，两轮内确认；幂等保存、真实关联提醒、完成与恢复、自然语言取消均持久生效')
+                report['checks'].append(category+' 真实可点击选项，两轮内确认；幂等保存、真实关联提醒、完成与恢复、自然语言取消经审批后生效')
             natural=g.chat('确认目标：每天整理10分钟的中性阅读笔记。只保存目标，不安排提醒。')
             jobs.append(natural['id']);await wait(g,natural['id'])
             assert any(t['name']=='create_goal' and t['result'].get('id') for t in g.evidence(natural['id'])['tools'])
@@ -112,9 +111,7 @@ async def run_v2(owner, key, phase, output_dir):
     STATE_ROOT.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix='muse-v2-live-', dir=STATE_ROOT))
     g = LiveGateway(ROOT, directory)
-    g.owner = owner
-    g.settings.api_key = lambda: key
-    g.settings.update(owner.settings.current())
+    configure_live_gateway(g, owner, key)
     g.settings.update({'feed_brief': '关注 Python、OpenAI 和 NASA 官方公开更新，说明具体变化与学习的关系。', 'notification_policy': 'strict'})
     if phase >= 5:
         g.settings.update({'feed_brief':'关注 Python、OpenAI、NASA 和 GitHub 官方公开更新。选择事实材料较充足的独立文章分别整理，不把同站的多篇不同主题文章合并成一条；说明具体变化与学习的关系，至多五条。'})
@@ -189,6 +186,8 @@ async def run_v2(owner, key, phase, output_dir):
         assert g.record_detail(goal['id'])['payload'] == goal['payload']
         positive = g.chat('请调用 update_goal 修改v2阅读目标的下一步为：整理阅读笔记。保持进行中。', topic['id'])
         jobs.append(positive['id']); await wait(g, positive['id'])
+        assert g.record_detail(goal['id'])['payload'] == goal['payload']
+        approve_item_edit(g, positive, goal['id'])
         assert g.record_detail(goal['id'])['payload']['next_step'] == '整理阅读笔记'
         assert g.record_detail(goal['id'])['payload']['state'] == 'active'
         report['checks'].append('真实模型否定请求未修改目标，明确下一步更新通过当前目标与字段校验')

@@ -8,6 +8,7 @@ from navi.agent import Agent
 from navi.gateway import APIError, Gateway
 from navi.storage import packed
 from test_gateway import ROOT, Clock, Model
+from test_item_edits import EditModel, edit_model, review
 from test_muse_revision import ContentModel, ideas, local_clock
 from navi.model import AgentError, Reply
 from navi.web import create_app
@@ -91,6 +92,9 @@ def test_full_search_title_priority_paging_empty_and_deleted(g):
     ('等我确认再完成阅读目标', {'state': 'completed'}),
     ('请更新阅读目标的描述为每天阅读十分钟', {'body': '每天阅读十分钟', 'state': 'completed'}),
     ('请修改阅读目标的下一步为选书', {'next_step': '选书', 'body': '夹带描述'}),
+    ('请更新阅读目标的描述为十分钟', {'title': '夹带标题'}),
+    ('把阅读目标的标题改成睡前阅读可以吗？', {'title': '睡前阅读'}),
+    ('把阅读目标的标题改成睡前阅读', {'title': '睡前阅读', 'body': '夹带描述'}),
     ('请更新阅读目标的描述为完成一本书', {'body': '完成一本书', 'state': 'completed'}),
 ])
 async def test_l01_rejects_unauthorized_goal_fields_without_lifecycle_changes(g, text, changes):
@@ -113,11 +117,15 @@ async def test_l01_matches_current_target_and_positive_update_complete_restore(g
     with pytest.raises(ValueError):
         await Agent(g).call_tool(request, g.job_config(), 'update_goal', {'id': other['id'], 'body': '错误目标'})
     result = await Agent(g).call_tool(request, g.job_config(), 'update_goal', {'id': goal['id'], 'body': '每天阅读十分钟'})
-    assert result['payload']['body'] == '每天阅读十分钟'
+    assert result['target_id'] == goal['id'] and g.record_detail(goal['id'])['payload']['body'] == '每日阅读'
+    review(g, request)
+    assert g.record_detail(goal['id'])['payload']['body'] == '每天阅读十分钟'
     for text, state in [('请完成阅读目标', 'completed'), ('请恢复阅读目标', 'active'), ('请暂停阅读目标', 'paused')]:
         request = g.chat(text)
         result = await Agent(g).call_tool(request, g.job_config(), 'update_goal', {'id': goal['id'], 'state': state})
-        assert result['payload']['state'] == state
+        assert result['target_id'] == goal['id']
+        review(g, request)
+        assert g.record_detail(goal['id'])['payload']['state'] == state
     assert g.record_detail(other['id'])['payload']['state'] == 'active'
 
 
@@ -392,8 +400,35 @@ async def test_natural_goal_edits_use_session_without_id(g, text, changes):
     other = reading(g)
     request = g.chat(text, topic['id'])
     await Agent(g).call_tool(request, g.job_config(), 'update_goal', changes)
+    assert g.record_detail(goal['id'])['payload'] == goal['payload']
+    review(g, request)
     assert g.record_detail(goal['id'])['payload'].items() >= changes.items()
     assert g.record_detail(other['id'])['payload']['body'] == '每日阅读'
+
+
+@pytest.mark.parametrize('text', [
+    '把「每周跑步10km」目标的标题改成「每周跑步7km」',
+    '我非常明确的告诉你 我要改标题 把标题改成每周跑步7km',
+])
+async def test_chat_renames_existing_goal_through_web(g, text):
+    topic = g.session('运动讨论')
+    goal = g.record('goal', {'title': '每周跑步10km', 'body': '每周累计跑步7公里',
+                             'next_step': '选路线', 'session_id': topic['id'], 'state': 'active'})
+    reminder = g.schedule({'title': '运动提醒', 'instruction': '跑步', 'goal_id': goal['id']})
+    other = reading(g)
+    g.model = edit_model('goal', '跑步', [goal['id']], title='每周跑步7km')
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=create_app(g)), base_url='http://testserver') as web:
+        response = await web.post('/api/chat', json={'text': text, 'session_id': topic['id']})
+        assert response.status_code == 200
+        await g.run_one()
+        assert (await web.get('/api/records/' + goal['id'])).json()['payload'] == goal['payload']
+        review(g, response.json())
+        payload = (await web.get('/api/records/' + goal['id'])).json()['payload']
+    assert payload == {**goal['payload'], 'title': '每周跑步7km', 'abstract': '每周跑步7km'}
+    assert '已准备审批' in g.require('jobs', response.json()['id'])['result']
+    assert g.record_detail(other['id'])['payload'] == other['payload']
+    assert g.require('schedules', reminder['id']) == reminder
+    assert len(g.model.calls) == 2
 
 
 async def test_goal_edit_uses_selected_reference_not_replacement_text(g):
@@ -401,6 +436,7 @@ async def test_goal_edit_uses_selected_reference_not_replacement_text(g):
     other = g.record('goal', {'title': '运动目标'})
     request = g.chat('把描述改成完成运动目标', references=[{'kind': 'goal', 'id': goal['id']}])
     await Agent(g).call_tool(request, g.job_config(), 'update_goal', {'body': '完成运动目标'})
+    review(g, request)
     assert g.record_detail(goal['id'])['payload']['body'] == '完成运动目标'
     assert g.record_detail(goal['id'])['payload']['state'] == 'active'
     assert 'body' not in g.record_detail(other['id'])['payload']
@@ -420,9 +456,11 @@ async def test_ambiguous_or_missing_target_cannot_be_selected_by_model(g):
 async def test_quoted_goal_title_and_short_name_resolve_in_chat(g):
     goal = reading(g)
     g.record('goal', {'title': '周末运动'})
-    for text in ('把“阅读目标”的描述改成十分钟', '把阅读的描述改成十分钟'):
-        result = await Agent(g).call_tool(g.chat(text), g.job_config(), 'update_goal', {'body': '十分钟'})
-        assert result['id'] == goal['id']
+    for text, body in [('把“阅读目标”的描述改成十分钟', '十分钟'), ('把阅读的描述改成十五分钟', '十五分钟')]:
+        job = g.chat(text)
+        result = await Agent(g).call_tool(job, g.job_config(), 'update_goal', {'body': body})
+        assert result['target_id'] == goal['id']
+        review(g, job)
 
 
 async def test_cancel_goal_and_its_reminder_in_context_without_ids(g):
@@ -435,12 +473,15 @@ async def test_cancel_goal_and_its_reminder_in_context_without_ids(g):
     request = g.chat('取消这个目标的提醒', topic['id'])
     agent = Agent(g)
     await agent.call_tool(request, g.job_config(), 'cancel_tracking', {})
+    review(g, request)
     assert g.require('tasks', first['task_id'])['state'] == 'cancelled'
     assert g.require('tasks', second['task_id'])['state'] == 'active'
     assert g.record_detail(goal['id'])['payload'].get('state', 'active') == 'active'
     with pytest.raises(ValueError):
         await agent.call_tool(request, g.job_config(), 'cancel_goal', {})
-    await agent.call_tool(g.chat('取消这个目标', topic['id']), g.job_config(), 'cancel_goal', {})
+    request = g.chat('取消这个目标', topic['id'])
+    await agent.call_tool(request, g.job_config(), 'cancel_goal', {})
+    review(g, request)
     assert g.record_detail(goal['id'])['payload']['state'] == 'cancelled'
     assert g.record_detail(other['id'])['payload']['state'] == 'active'
 
@@ -455,8 +496,8 @@ async def test_short_edit_after_previous_goal_discussion_uses_web_chat(g):
     # must use the actual tool before the chat can report a successful edit.
     replies = iter([
         [{'type': 'text', 'text': '请提供目标 ID'}],
-        [{'type': 'tool_use', 'id': 'edit', 'name': 'update_goal', 'input': {'body': '每天读十分钟'}}],
-        [{'type': 'text', 'text': '阅读目标已修改。'}],
+        [{'type': 'tool_use', 'id': 'lookup', 'name': 'find_edit_targets', 'input': {'kind': 'goal', 'query': '阅读'}}],
+        [{'type': 'tool_use', 'id': 'edit', 'name': 'propose_item_edit', 'input': {'kind': 'goal', 'candidate_ids': [goal['id']], 'body': '每天读十分钟'}}],
     ])
     class EditModel(Model):
         async def chat(self, **request):
@@ -466,6 +507,8 @@ async def test_short_edit_after_previous_goal_discussion_uses_web_chat(g):
         job = (await client.post('/api/chat', json={'text': '改成每天读十分钟', 'session_id': topic['id']})).json()
         await g.run_one()
         assert g.require('jobs', job['id'])['status'] == 'succeeded'
+        assert g.record_detail(goal['id'])['payload']['body'] == '每日阅读'
+        review(g, job)
         assert g.record_detail(goal['id'])['payload']['body'] == '每天读十分钟'
         assert g.record_detail(other['id'])['payload']['body'] == '选城市'
 
@@ -497,7 +540,9 @@ async def test_named_practice_steps_are_saved_verbatim_from_chat(g):
         await g.run_one()
 
     result = g.require('jobs', job['id'])
-    assert result['status'] == 'succeeded' and steps in result['result']
+    assert result['status'] == 'succeeded' and '已准备审批' in result['result']
+    action = review(g, job)
+    assert json.loads(action['body'])['changes'] == {'next_step': steps}
     assert g.record_detail(goal['id'])['payload'].items() >= {'body': '隔日练习三十分钟', 'next_step': steps}.items()
     assert g.record_detail(other['id'])['payload']['next_step'] == '原安排'
     assert not g.db.all('SELECT id FROM schedules')
@@ -536,6 +581,7 @@ async def test_guitar_goal_chat_collects_details_confirms_and_edits_by_short_nam
     retry = g.chat('你再试一次写入')
     await g.run_one()
     assert g.require('jobs', retry['id'])['status'] == 'succeeded'
+    review(g, retry)
     assert g.record_detail(goal['id'])['payload']['next_step'] == steps
     direct = g.chat(edit)
     await g.run_one()
@@ -545,19 +591,17 @@ async def test_guitar_goal_chat_collects_details_confirms_and_edits_by_short_nam
 async def test_answering_clarification_by_title_completes_original_edit(g):
     goal = reading(g)
     other = g.record('goal', {'title': '周末运动', 'body': '跑步'})
-    class AskModel(Model):
-        async def chat(self, **request):
-            if isinstance(request['messages'][-1]['content'], str):
-                return Reply([{'type': 'tool_use', 'id': 'edit', 'name': 'update_goal', 'input': {'body': '每天十分钟'}}], 100, 40)
-            return Reply([{'type': 'text', 'text': '想改阅读目标还是周末运动？'}], 100, 40)
-    g.model = AskModel()
+    g.model = edit_model('goal', '', [goal['id'], other['id']], body='每天十分钟')
     initial = g.chat('修改目标描述为每天十分钟')
     await g.run_one()
     assert g.require('jobs', initial['id'])['status'] == 'succeeded'
     assert g.record_detail(goal['id'])['payload']['body'] == '每日阅读'
+    g.model = EditModel(('choose_edit_target', {'id': goal['id']}))
     selection = g.chat('阅读目标', initial['session_id'])
     await g.run_one()
     assert g.require('jobs', selection['id'])['status'] == 'succeeded'
+    assert g.record_detail(goal['id'])['payload']['body'] == '每日阅读'
+    review(g, selection)
     assert g.record_detail(goal['id'])['payload']['body'] == '每天十分钟'
     assert g.record_detail(other['id'])['payload']['body'] == '跑步'
 
@@ -572,7 +616,9 @@ async def test_repeat_guitar_edit_uses_short_name_and_strips_separator(g):
     ):
         job = g.chat(command)
         await g.run_one()
-        assert g.require('jobs', job['id'])['result'].endswith(expected)
+        assert '已准备审批' in g.require('jobs', job['id'])['result']
+        action = review(g, job)
+        assert json.loads(action['body'])['changes'] == {'next_step': expected}
         assert g.record_detail(goal['id'])['payload']['next_step'] == expected
 
 
@@ -593,6 +639,8 @@ async def test_goal_edit_selects_or_confirms_persisted_target(g, answer):
     selection = g.chat(answer, initial['session_id'])
     await g.run_one()
     assert g.require('jobs', selection['id'])['status'] == 'succeeded'
+    assert g.record_detail(goal['id'])['payload']['next_step'] == '练和弦'
+    review(g, selection)
     assert g.record_detail(goal['id'])['payload']['next_step'] == expected
     if other:
         assert g.record_detail(other['id'])['payload']['next_step'] == '复习'
@@ -604,7 +652,7 @@ async def test_goal_content_edit_does_not_authorize_scheduling(g):
     job = g.chat('把午餐改成每天一百克', topic['id'])
     agent = Agent(g)
     result = await agent.call_tool(job, g.job_config(), 'update_goal', {'body': '午餐每天一百克'})
-    assert result['id'] == goal['id']
+    assert result['target_id'] == goal['id']
     with pytest.raises(ValueError):
         await agent.call_tool(job, g.job_config(), 'schedule_task', {'title': '午餐', 'instruction': '午餐', 'kind': 'once', 'next_due': g.clock()+3600})
     assert not g.db.all('SELECT * FROM schedules')
