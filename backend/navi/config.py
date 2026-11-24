@@ -1,10 +1,11 @@
 from pathlib import Path
+import hashlib
 import json
 import os
 import math
 from uuid import uuid4
 
-from .endpoints import OFFICIAL_URLS, legacy_endpoint_urls, validate_endpoint
+from .endpoints import OFFICIAL_URLS, legacy_endpoint_urls, request_url, validate_endpoint
 from .storage import Database, packed
 from .web_search import DEFAULT_PROVIDER, SEARCH_PROVIDERS
 
@@ -123,7 +124,27 @@ class Settings:
             "web_search_keys_configured": {provider: bool(self.web_search_key(provider)) for provider in SEARCH_PROVIDERS},
             "endpoint_profiles": self.endpoint_profiles(),
             "official_endpoints": OFFICIAL_URLS,
+            "native_search_check": self.native_search_check(config),
         }
+
+    def native_search_identity(self, config):
+        key = self.api_key(config)
+        if not key:
+            return None
+        return hashlib.sha256(packed([config.get("endpoint_id"), request_url(config), config["protocol"], config["model"], key]).encode()).hexdigest()
+
+    def native_search_check(self, config):
+        identity = self.native_search_identity(config)
+        if identity:
+            row = self.db.one("SELECT value FROM settings WHERE key=?", ("native_search:" + identity,))
+            if row:
+                return json.loads(row["value"])
+        return "untested"
+
+    def save_native_search_check(self, identity, status):
+        if identity:
+            with self.db.transaction() as conn:
+                self.store(conn, "native_search:" + identity, status)
 
     def web_search_key(self, provider):
         credentials = self.credentials()

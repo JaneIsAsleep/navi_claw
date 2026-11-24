@@ -369,13 +369,22 @@ class Gateway:
         conn.execute("INSERT INTO audit(job_id,kind,data,created) VALUES(?,'job.queued',?,?)", (identity, packed({"task_id": task_id, "session_id": session_id, "trigger_key": trigger_key or f"manual:{identity}"}), now))
         return identity
 
-    def chat(self, text, session_id=None, kind="chat", references=None, new_session=False, timezone=None):
+    def set_session_search(self, identity, enabled):
+        if type(enabled) is not bool:
+            raise ValueError("联网开关须为布尔值")
+        if not self.db.execute("UPDATE sessions SET web_search_enabled=? WHERE id=? AND state='active'", (enabled, identity)):
+            raise ValueError("对话不可用")
+        return self.require("sessions", identity)
+
+    def chat(self, text, session_id=None, kind="chat", references=None, new_session=False, timezone=None, web_search_enabled=None):
         if not isinstance(text, str) or not text.strip() or len(text) > 20000:
             raise ValueError("消息长度应为 1 至 20000 个字符")
         if kind not in {"chat", "ideas", "draft", "compact", "connection"}:
             raise ValueError("无效的作业类型")
         if timezone is not None:
             timezone_for(timezone)
+        if web_search_enabled is not None and type(web_search_enabled) is not bool:
+            raise ValueError("联网开关须为布尔值")
         references = references or []
         if not isinstance(references, list) or len(references) > 5:
             raise ValueError("最多引用 5 项内容")
@@ -413,6 +422,9 @@ class Gateway:
                 conn.execute("UPDATE sessions SET goal_setup_json=? WHERE id=?", (packed(setup), session_id))
                 kind = "goal_setup"
             config = self.job_config()
+            if web_search_enabled is not None:
+                conn.execute("UPDATE sessions SET web_search_enabled=? WHERE id=?", (web_search_enabled, session_id))
+            config["web_search_enabled"] = bool(session["web_search_enabled"]) if web_search_enabled is None else web_search_enabled
             if timezone is not None:
                 config["timezone"] = timezone
             previous = conn.execute("SELECT m.role,j.input,j.config,j.status,j.id FROM messages m LEFT JOIN jobs j ON j.id=m.job_id WHERE m.session_id=? ORDER BY m.created DESC,m.rowid DESC LIMIT 1", (session_id,)).fetchone()

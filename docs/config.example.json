@@ -15,6 +15,5 @@
   "input_price_per_million": 0,
   "output_price_per_million": 0,
   "price_currency": "USD",
-  "web_search_enabled": false,
   "web_search_provider": "bocha"
 }

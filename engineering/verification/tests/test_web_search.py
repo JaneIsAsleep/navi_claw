@@ -59,8 +59,7 @@ async def test_search_switch_and_read_only_result(tmp_path, monkeypatch, enabled
     gateway.web_search = Search()
     if configured:
         gateway.settings.update({"web_search_api_key": "fake-search-key"})
-    gateway.settings.update({"web_search_enabled": enabled})
-    queued = gateway.chat("联网搜索 Python 官方发布消息")
+    queued = gateway.chat("联网搜索 Python 官方发布消息", web_search_enabled=enabled)
     await gateway.run_one()
     job = gateway.require("jobs", queued["id"])
     assert job["status"] == "succeeded"
@@ -81,10 +80,10 @@ async def test_search_switch_and_read_only_result(tmp_path, monkeypatch, enabled
 async def test_disabling_blocks_queued_job_tool_call(tmp_path, monkeypatch):
     monkeypatch.delenv("BRAVE_SEARCH_API_KEY", raising=False)
     gateway = Gateway(ROOT, tmp_path, clock=Clock())
-    gateway.settings.update({"web_search_enabled": True, "web_search_api_key": "fake-search-key"})
-    config = gateway.job_config()
-    job = gateway.chat("联网搜索 Python")
-    gateway.settings.update({"web_search_enabled": False})
+    gateway.settings.update({"web_search_api_key": "fake-search-key"})
+    job = gateway.chat("联网搜索 Python", web_search_enabled=True)
+    config = json.loads(job["config"])
+    gateway.set_session_search(job["session_id"], False)
     with pytest.raises(ValueError, match="未启用"):
         await Agent(gateway).call_tool(job, config, "web_search", {"query": "Python"})
 
@@ -121,8 +120,8 @@ async def test_provider_credentials_are_isolated_and_legacy_brave_remains_availa
     for provider in SEARCH_PROVIDERS:
         settings.update({"web_search_provider": provider, "web_search_api_key": f"fake-{provider}"})
     settings.update({"web_search_enabled": True, "web_search_provider": "bocha", "web_search_api_key": ""})
-    job = gateway.chat("联网搜索 Python")
-    config = gateway.job_config()
+    job = gateway.chat("联网搜索 Python", web_search_enabled=True)
+    config = json.loads(job["config"])
     settings.update({"web_search_provider": "anysearch"})
     with pytest.raises(ValueError, match="服务已切换"):
         await Agent(gateway).call_tool(job, config, "web_search", {"query": "Python"})

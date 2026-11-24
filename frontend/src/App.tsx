@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowUp, BookOpen, Check, ChevronRight, ChevronLeft, Heart, Users, Wallet, Briefcase, Palette, Zap, Copy, Download, FileText, Flag, Lightbulb, Menu, MessageCircle, MoreHorizontal, Plus, Radio, Search, Settings, Square, X } from 'lucide-react'
 import { api, browserTimezone, labels, localDate, terminal, time, type Action, type CheckItem, type Config, type FeedImage, type GoalSetup, type GoalCard, type Detail, type Editor, type Item, type Job, type Message, type Reference, type Schedule, type Session, type State, type Tab } from './data'
 import type { EndpointProfile, EndpointUrls, Protocol } from './data'
-import { searchProviders, type SearchProvider } from './data'
+import { nativeSearchLabels, searchProviders, type SearchProvider } from './data'
 import { Dialog } from './Dialog'
 import { SearchDialog } from './SearchDialog'
 import { SourcesDialog } from './SourcesDialog'
@@ -84,6 +84,8 @@ export default function App() {
   const selectedEndpoint = config?.endpoint_profiles.find(profile => profile.id === config.endpoint_id)
   const endpointSelect = useRef<HTMLSelectElement>(null)
   const [connectionJob, setConnectionJob] = useState('')
+  const [nativeSearchJob, setNativeSearchJob] = useState('')
+  const [newChatSearch, setNewChatSearch] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const chatRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLElement>(null)
@@ -102,6 +104,10 @@ export default function App() {
   const feedPaired = page === 'feed' && feedChatVisible && !detail
   const paired = goalPaired || feedPaired
   const currentSession = state?.sessions.find(row => row.id === sessionId) || openedSession
+  const chatSearch = sessionId ? Boolean(currentSession?.web_search_enabled) : newChatSearch
+  const savedConnection = state?.settings
+  const connectionSaved = Boolean(config && savedConnection?.api_key_configured && !addingEndpoint && !apiKey.trim()
+    && config.endpoint_id === savedConnection.endpoint_id && config.protocol === savedConnection.protocol && config.model === savedConnection.model)
   const archived = currentSession?.state === 'archived'
   const busy = state?.jobs.find(job => job.session_id === sessionId && !terminal(job.status) && ['chat', 'ideas', 'draft', 'compact', 'connection', 'goal_setup', 'goal_save'].includes(job.kind))
   const pending = state?.actions.filter(row => row.status === 'pending').length || 0
@@ -175,6 +181,14 @@ export default function App() {
     const row = state?.jobs.find(job => job.id === connectionJob)
     if (row && terminal(row.status)) { setNotice(row.status === 'succeeded' ? '真实 API 检查成功，已收到模型响应。' : '检查失败：' + row.error); setConnectionJob('') }
   }, [connectionJob, state?.jobs])
+  useEffect(() => {
+    if (!nativeSearchJob) return
+    const row = state?.jobs.find(job => job.id === nativeSearchJob)
+    if (row && terminal(row.status)) {
+      if (row.status !== 'succeeded') setError('原生搜索测试失败：' + row.error)
+      setNativeSearchJob('')
+    }
+  }, [nativeSearchJob, state?.jobs])
   useEffect(() => { void refresh(); const timer = setInterval(() => void poll.current(), 2500); return () => clearInterval(timer) }, [])
   useEffect(() => { void cacheRecent() }, [state?.sessions.map(row => row.id + row.state + row.title).join('|')])
   useEffect(() => {
@@ -284,14 +298,22 @@ export default function App() {
   }
   function newChat() {
     setNotice(''); setError('')
+    setNewChatSearch(false)
     rememberPosition(); loadedSession.current = ''; setSessionId(''); setOpenedSession(null); setMessages([]); setPage('chat'); location.hash = 'chat'
     const next = draft(''); setInput(next.text); setReferences(next.references); setComposerKind(next.kind)
     localStorage.setItem('navi-draft-active', 'true'); setSessionOpen(false); requestAnimationFrame(() => inputRef.current?.focus())
   }
+  function toggleChatSearch() {
+    if (!sessionId) { setNewChatSearch(!newChatSearch); return }
+    void act(async () => {
+      const updated = await api<Session>('/sessions/' + sessionId + '/web-search', 'PUT', { enabled: !chatSearch })
+      setState(current => current && { ...current, sessions: current.sessions.map(row => row.id === updated.id ? updated : row) })
+    })
+  }
   async function submit(text = input, kind = composerKind) {
     if (!text.trim() || working || busy || archived) return
     await act(async () => {
-      const row = await api<Job>('/chat', 'POST', { text, session_id: sessionId || undefined, kind, references, new_session: !sessionId, timezone: browserTimezone() })
+      const row = await api<Job>('/chat', 'POST', { text, session_id: sessionId || undefined, kind, references, new_session: !sessionId, timezone: browserTimezone(), ...(!sessionId ? { web_search_enabled: chatSearch } : {}) })
       localStorage.removeItem('navi-draft-' + (sessionId || 'new')); localStorage.setItem('navi-draft-active', 'false'); localStorage.setItem('navi-session', row.session_id!)
       setSessionId(row.session_id!); setInput(''); setReferences([]); setFeedReply(null); setComposerKind('chat'); if (!paired) { setPage('chat'); location.hash = 'chat' }
       positions.current['chat-' + row.session_id] = Number.MAX_SAFE_INTEGER
@@ -461,7 +483,7 @@ export default function App() {
         <div className={s.composerArea}>
           {feedReply?.session === sessionId && references.some(ref => ref.id === feedReply.id) && <p className={s.feedReply}>正在回复 Navi · {feedReply.title}</p>}
           {references.length > 0 && <div className={s.references}>{references.map(ref => <div className={s.reference} key={ref.id}><details><summary>引用：{ref.title}</summary><p>{ref.body}</p>{ref.source_url && <a href={ref.source_url} target="_blank" rel="noreferrer">原始来源</a>}</details><button className={s.iconButton} aria-label={'移除引用 ' + ref.title} onClick={() => saveDraft(input, references.filter(r => r.id !== ref.id))}><X size={16} /></button></div>)}</div>}
-          <form className={s.composer} onSubmit={event => { event.preventDefault(); void submit() }}><textarea ref={inputRef} aria-label="消息内容" placeholder={archived ? '解封后继续话题' : '和 Navi 说点什么'} disabled={archived} rows={2} value={input} onChange={event => saveDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className={s.composerTools}><span className={s.subtle}>{input ? '草稿保存在本机' : 'Enter 发送 · Shift + Enter 换行'}</span>{busy ? <button type="button" className={s.send} aria-label="停止当前作业" onClick={() => actPath('/jobs/' + busy.id + '/cancel', 'POST', {})}><Square size={16} fill="currentColor" /></button> : <button type="submit" className={s.send} aria-label="发送消息" disabled={!input.trim() || working || !connected || archived}><ArrowUp size={20} /></button>}</div></form>
+          <form className={s.composer} onSubmit={event => { event.preventDefault(); void submit() }}><div className={s.rowActions}><button type="button" className={chatSearch ? s.secondary : s.textButton} aria-pressed={chatSearch} disabled={working || !connected || archived} onClick={toggleChatSearch}>联网搜索{chatSearch ? '已开启' : '已关闭'}</button>{chatSearch && <span className={s.subtle}>{savedConnection?.native_search_check === 'supported' ? '优先 DeepSeek 原生搜索' : searchProviders[savedConnection?.web_search_provider ?? 'bocha']}</span>}</div><textarea ref={inputRef} aria-label="消息内容" placeholder={archived ? '解封后继续话题' : '和 Navi 说点什么'} disabled={archived} rows={2} value={input} onChange={event => saveDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className={s.composerTools}><span className={s.subtle}>{input ? '草稿保存在本机' : 'Enter 发送 · Shift + Enter 换行'}</span>{busy ? <button type="button" className={s.send} aria-label="停止当前作业" onClick={() => actPath('/jobs/' + busy.id + '/cancel', 'POST', {})}><Square size={16} fill="currentColor" /></button> : <button type="submit" className={s.send} aria-label="发送消息" disabled={!input.trim() || working || !connected || archived}><ArrowUp size={20} /></button>}</div></form>
         </div>
 </ChatPanel>
   return <div className={s.app} onClickCapture={event => { const target = (event.target as Element).closest<HTMLElement>('button, a'); if (target) interaction.current = target }}>
@@ -510,7 +532,7 @@ export default function App() {
           {page === 'settings' && config && <form className={s.settings} onSubmit={event => {
             event.preventDefault()
             void act(async () => {
-              const { api_key_configured: _configured, web_search_keys_configured: _searchConfigured, endpoint_profiles: _profiles, official_endpoints: _official, ...fields } = config
+              const { api_key_configured: _configured, native_search_check: _nativeCheck, web_search_keys_configured: _searchConfigured, endpoint_profiles: _profiles, official_endpoints: _official, ...fields } = config
               const next = await api<Config>('/settings', 'PUT', { ...fields, ...(addingEndpoint ? { endpoint_urls: endpointUrls } : {}), ...(apiKey.trim() ? { api_key: apiKey } : {}), ...(searchKey.trim() ? { web_search_api_key: searchKey } : {}) })
               setConfig(next); setAddingEndpoint(false); setApiKey(''); setSearchKey('')
             }, '设置已保存。连接是否可用须看真实检查结果。')
@@ -541,12 +563,13 @@ export default function App() {
             </>}
             <label>API 密钥<input type="password" autoComplete="new-password" placeholder="留空保留该配置已有的密钥" value={apiKey} onChange={event => setApiKey(event.target.value)} /></label>
             <p className={s.subtle}>{!addingEndpoint && config.endpoint_id === state?.settings.endpoint_id && state.settings.api_key_configured ? '此配置的密钥已保存在本机，不回显。' : '每组配置独立保存密钥，两条 URL 共用该密钥。请仅填写你信任的服务地址。'}</p>
-            <div className={s.rowActions}><button type="submit" className={s.primary} disabled={working}>保存设置</button><button type="button" className={s.secondary} disabled={working || !!connectionJob || !state?.settings.api_key_configured || addingEndpoint || !!apiKey.trim() || config.endpoint_id !== state.settings.endpoint_id || config.protocol !== state.settings.protocol || config.model !== state.settings.model} onClick={() => void act(async () => { const job = await api<Job>('/settings/check', 'POST', {}); setConnectionJob(job.id); setNotice('正在进行真实检查') })}>真实连接检查</button></div>
-            <h2>联网搜索</h2>
-            <label>公开网页搜索<select value={config.web_search_enabled ? 'on' : 'off'} onChange={event => setConfig({ ...config, web_search_enabled: event.target.value === 'on' })}><option value="off">关闭（默认）</option><option value="on">开启</option></select></label>
+            <div className={s.rowActions}><button type="submit" className={s.primary} disabled={working}>保存设置</button><button type="button" className={s.secondary} disabled={working || !!connectionJob || !connectionSaved} onClick={() => void act(async () => { const job = await api<Job>('/settings/check', 'POST', {}); setConnectionJob(job.id); setNotice('正在进行真实检查') })}>真实连接检查</button></div>
+            <p><button type="button" className={s.secondary} disabled={working || !!nativeSearchJob || !connectionSaved} onClick={() => void act(async () => { const job = await api<Job>('/settings/check-native-search', 'POST', {}); setNativeSearchJob(job.id) })}>测试原生搜索</button></p>
+            <p className={s.subtle} role="status">{!connectionSaved ? '先保存模型连接设置，即可测试。' : nativeSearchJob ? '正在进行真实搜索测试…' : nativeSearchLabels[savedConnection?.native_search_check ?? 'untested']}</p>
+            <h2>第三方搜索</h2>
             <label>搜索服务<select value={config.web_search_provider} onChange={event => { setSearchKey(''); setConfig({ ...config, web_search_provider: event.target.value as SearchProvider }) }}>{Object.entries(searchProviders).map(([key, name]) => <option key={key} value={key}>{name}{config.web_search_keys_configured[key as SearchProvider] ? '（已配置）' : ''}</option>)}</select></label>
             <label>{searchProviders[config.web_search_provider]} API 密钥<input type="password" autoComplete="new-password" maxLength={256} value={searchKey} onChange={event => setSearchKey(event.target.value)} placeholder="留空保留此服务的密钥" /></label>
-            <p className={s.subtle}>各服务的密钥独立保存在本机，不回显。开启后，搜索关键词只发给当前所选服务。仅返回摘要与链接，不影响订阅和后台任务。</p>
+            <p className={s.subtle}>在输入框上方为当前对话开启联网。原生搜索未验证或失败时，可使用这里配置的服务。各服务的密钥独立保存。</p>
             <button type="submit" className={s.secondary} disabled={working}>保存联网搜索设置</button>
             <h2>提醒与授权</h2><label>普通站内提醒<select value={config.notification_policy} onChange={event => setConfig({ ...config, notification_policy: event.target.value })}><option value="daily">日常：按已有授权自动发送</option><option value="strict">严格：每条提醒人工审批</option></select></label><p className={s.subtle}>导出文件始终先审批。未批准内容不会进入 Outbox。</p><p className={s.subtle}>网页提醒时区：{browserTimezone() || config.timezone}（{browserTimezone() ? '浏览器' : '备用设置'}）</p><label>命令行、后台和网页备用时区<input value={config.timezone} onChange={event => setConfig({ ...config, timezone: event.target.value })} /></label>
             <h2>隐私与运行</h2><p>模型调用会将本次有效会话、摘要、记忆、目标和引用资料发给配置的模型服务。停用记忆影响以后的调用。</p><p>双击 start.command 启动，启动终端与浏览器可以关闭。真正停止使用 stop.command。电脑休眠期间无法实时执行，恢复后每个调度最多补做一次。</p>

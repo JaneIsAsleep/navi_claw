@@ -136,7 +136,11 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
     @app.post("/api/chat")
     async def chat(request: Request):
         values = await body(request)
-        return gateway.chat(values.get("text"), values.get("session_id"), values.get("kind", "chat"), values.get("references"), values.get("new_session", False), timezone=values.get("timezone"))
+        return gateway.chat(values.get("text"), values.get("session_id"), values.get("kind", "chat"), values.get("references"), values.get("new_session", False), timezone=values.get("timezone"), web_search_enabled=values.get("web_search_enabled"))
+
+    @app.put("/api/sessions/{identity}/web-search")
+    async def session_search(identity: str, request: Request):
+        return gateway.set_session_search(identity, (await body(request)).get("enabled"))
 
     @app.post("/api/goals/start")
     async def start_goal(request: Request):
@@ -277,6 +281,17 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
     async def check_connection():
         with gateway.db.transaction() as conn:
             identity = gateway.insert_job(conn, kind="connection", text="请简短回复，确认真实 API 已返回结果。")
+        return gateway.require("jobs", identity)
+
+    @app.post("/api/settings/check-native-search")
+    async def check_native_search():
+        config = gateway.job_config()
+        if not gateway.settings.api_key(config):
+            raise ValueError("请先保存当前连接的 API 密钥")
+        with gateway.db.transaction() as conn:
+            if conn.execute("SELECT 1 FROM jobs WHERE kind='native_search_check' AND status IN ('pending','running')").fetchone():
+                raise APIError("已有原生搜索测试正在运行", 409)
+            identity = gateway.insert_job(conn, kind="native_search_check", text="请实际联网搜索 Python 官方网站的最新发布消息，附上来源。", config=config)
         return gateway.require("jobs", identity)
 
     @app.put("/api/check-items")

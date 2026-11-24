@@ -2,7 +2,9 @@
 
 本机入口为 [Navi](http://127.0.0.1:8766)。DeepSeek 密钥留在本机，最近实际验证的模型为 `deepseek-flash`，使用 Messages 协议。检查当前服务使用 `status.command`。
 
-网页「设置 → 联网搜索」默认关闭。新配置默认选博查，可切换至 Brave Search 或 AnySearch。选择服务、填入对应密钥并保存；每家密钥独立保存在本机，切回时留空即可复用。已有 Brave 配置会继续生效。也可通过 `BOCHA_API_KEY`、`BRAVE_SEARCH_API_KEY` 或 `ANYSEARCH_API_KEY` 为相应服务配置启动环境。Navi 只向当前所选服务发送关键词，不自动切换服务。聊天示例：「联网搜索 Python 官方发布消息并列出来源」。每轮最多查询一次，返回最多五条摘要和链接，不自动打开原文。模型服务会收到搜索摘要，请勿查询敏感个人资料。关闭搜索不影响订阅、动态或提醒。接口依据：[博查官方 GitHub](https://github.com/bocha-ai/dsh-web-search-bocha/blob/main/README.md)、[Brave Search](https://api-dashboard.search.brave.com/app/documentation/web-search/get-started)、[AnySearch](https://www.anysearch.com/docs/api-endpoints/v1-search)。
+在网页聊天输入框上方开启「联网搜索」。开关按对话保存，默认关闭。「设置 → DeepSeek 连接 → 测试原生搜索」会用当前模型、Endpoint、协议和密钥发一次真实请求，收到成功的服务端搜索回执才算通过。更换连接配置后，显示该配置的测试状态。通过后，普通问答直接启用 DeepSeek 原生搜索；同一轮需要本地工具时，Navi 单独执行原生搜索，再处理本地任务。未验证通过时使用所选第三方服务；原生搜索实际失败时也可回退。原生搜索返回零结果或未执行搜索时不回退。接口依据 [DeepSeek Web Tools](https://api-docs.deepseek.com/guides/web_tools/)。
+
+「设置 → 第三方搜索」可选博查、Brave Search 或 AnySearch，各家的 API 密钥独立保存在本机。也可分别通过 `BOCHA_API_KEY`、`BRAVE_SEARCH_API_KEY` 或 `ANYSEARCH_API_KEY` 配置。第三方只收到查询关键词，每轮最多一次、最多五条摘要。搜索结果会交给模型，请勿查询敏感个人资料。联网开关只控制聊天里的网页搜索。
 
 网页「设置 → DeepSeek 连接」默认使用官方地址，Messages 为 `https://api.deepseek.com/anthropic/v1/messages`，Chat Completions 为 `https://api.deepseek.com/chat/completions`。在 Endpoint 下拉菜单选「添加 Endpoint…」，按服务商文档填写两条完整 URL。Messages 常见路径是 `/v1/messages`，Chat Completions 常见路径是 `/v1/chat/completions`。Navi 按所选协议直接使用对应 URL，不追加路径。每组两条 URL 共用一个本机密钥，各组密钥独立。选中已保存的配置并保存即可切换，也可复制后修改或确认删除。删除时一并移除该组密钥，删除当前配置会切回官方连接。旧前缀会在启动时迁移成一组按旧规则生成的 URL，迁移后请按服务商文档核对，再用「真实连接检查」验证所选协议。自定义服务会收到模型请求中的相关对话上下文，请仅填写可信地址。
 

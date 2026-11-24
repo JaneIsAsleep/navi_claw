@@ -2,7 +2,7 @@ export type Reference = { id: string; kind: string; title: string; body: string;
 export type FeedImage = { asset_id: string; source_url: string; alt: string; width?: number; height?: number }
 export type Payload = { title: string; body?: string; enabled?: boolean; state?: string; next_step?: string; source?: string; source_url?: string; checked_at?: number; source_time?: number; source_ids?: string[]; icon_key?: string; images?: FeedImage[]; sources?: { id: string; title: string; url: string; published_at?: string; source_time?: number; read_scope?: string; read_at?: number }[]; filename?: string; job_id?: string; source_job_id?: string; session_id?: string; goal_ids?: string[]; basis?: { memories?: Payload[]; goals?: Payload[] }; [key: string]: unknown }
 export type Item = { id: string; kind: string; payload: Payload; created: number; updated: number; source_session?: Session }
-export type Session = { id: string; title: string; summary?: string; display_abstract: string; goal_setup_json?: string; kind: string; state: string; created: number; updated: number; unread?: number; match_kind?: string; match_message_id?: string; match_excerpt?: string }
+export type Session = { id: string; title: string; summary?: string; display_abstract: string; goal_setup_json?: string; kind: string; state: string; created: number; updated: number; unread?: number; match_kind?: string; match_message_id?: string; match_excerpt?: string; web_search_enabled?: number }
 export type Job = { id: string; session_id?: string; task_id?: string; kind: string; status: string; input: string; result: string; error: string; attempt: number; created: number }
 export type Action = { id: string; job_id: string; kind: string; title: string; target: string; body: string; status: string; content_hash: string; basis: string; created: number; source_session_id?: string; source_title?: string; source_state?: string; version: number; delivery_state?: string; delivery_error?: string; acknowledged_at?: number | null }
 export type Schedule = { id: string; task_id: string; title: string; instruction: string; kind: string; state: string; interval_seconds: number | null; next_due: number; enabled: number; removed_from_reminders?: number; goal_id?: string; session_id?: string }
@@ -12,7 +12,14 @@ export type EndpointUrls = Record<Protocol, string>
 export type EndpointProfile = { id: string; urls: EndpointUrls }
 export const searchProviders = { bocha: '博查 Bocha', brave: 'Brave Search', anysearch: 'AnySearch' }
 export type SearchProvider = keyof typeof searchProviders
-export type Config = { model: string; protocol: Protocol; endpoint_id: string; endpoint_profiles: EndpointProfile[]; official_endpoints: EndpointUrls; workflow: string; notification_policy: string; api_key_configured: boolean; web_search_enabled: boolean; web_search_provider: SearchProvider; web_search_keys_configured: Record<SearchProvider, boolean>; timezone: string; feed_brief: string; [key: string]: string | number | boolean | EndpointProfile[] | EndpointUrls | Record<SearchProvider, boolean> }
+export const nativeSearchLabels = {
+  untested: '未测试。开启对话联网时使用第三方搜索。',
+  supported: '已验证原生搜索。开启对话联网时优先使用 DeepSeek。',
+  unsupported: '当前连接明确拒绝原生搜索。开启对话联网时使用第三方搜索。',
+  unverified: '未收到服务端搜索回执。开启对话联网时使用第三方搜索。',
+  failed: '原生搜索测试失败，可重试。开启对话联网时使用第三方搜索。',
+}
+export type Config = { model: string; protocol: Protocol; endpoint_id: string; endpoint_profiles: EndpointProfile[]; official_endpoints: EndpointUrls; workflow: string; notification_policy: string; api_key_configured: boolean; native_search_check: keyof typeof nativeSearchLabels; web_search_enabled: boolean; web_search_provider: SearchProvider; web_search_keys_configured: Record<SearchProvider, boolean>; timezone: string; feed_brief: string; [key: string]: string | number | boolean | EndpointProfile[] | EndpointUrls | Record<SearchProvider, boolean> }
 export type AutoContent = { latest: { id: string; status: string; error: string; error_code: string; next_run: number; recovery_count: number; updated: number; result: string } | null; last_success: number | null }
 export type State = { auto_content: { feed: AutoContent; ideas: AutoContent; next_due: number; timezone: string }; sessions: Session[]; main_session_id: string; jobs: Job[]; records: Item[]; actions: Action[]; notifications: { id: string; title: string; body: string; unread: number; created: number }[]; schedules: Schedule[]; check_items: CheckItem[]; feed_brief: string; feed_catalog: { id: string; title: string; url: string; source_type?: 'builtin' | 'custom' }[]; settings: Config; usage: { requests: number; input_tokens: number; output_tokens: number; estimated: number; cost_configured: boolean; estimated_cost: number; currency: string } }
 export type GoalCard = { type: 'goal_choices'; card_id: string; setup_version: number; question: string; choices: { id: string; label: string; value: string; operation: string }[]; selected?: string }
