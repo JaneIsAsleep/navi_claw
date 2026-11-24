@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from .gateway import TERMINAL, APIError
 from .feed_http import FeedReadError
 from .storage import packed
+from .version import __version__
 
 
 async def body(request, object_only=True):
@@ -23,7 +24,7 @@ async def body(request, object_only=True):
     return value
 
 
-def create_app(gateway, instance="test", project_id="test", shutdown_token=None):
+def create_app(gateway, instance="test", project_id="test", shutdown_token=None, request_shutdown=None):
     @asynccontextmanager
     async def lifespan(app):
         await gateway.start()
@@ -56,13 +57,16 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
 
     @app.get("/api/health")
     def health():
-        return {"name": "Navi", "ready": gateway.running, "instance": instance, "project_id": project_id, "pid": os.getpid()}
+        return {"name": "Navi", "version": __version__, "ready": gateway.running, "instance": instance, "project_id": project_id, "pid": os.getpid()}
 
     @app.post("/api/shutdown")
     async def shutdown(request: Request):
         if not shutdown_token or request.headers.get("X-Navi-Owner") != shutdown_token:
             return JSONResponse({"detail": "需要本项目停止入口"}, 403)
-        asyncio.get_running_loop().call_later(0.2, os.kill, os.getpid(), signal.SIGTERM)
+        if request_shutdown is not None:
+            asyncio.get_running_loop().call_later(0.2, request_shutdown)
+        else:
+            asyncio.get_running_loop().call_later(0.2, os.kill, os.getpid(), signal.SIGTERM)
         return {"stopping": True}
 
     @app.get("/api/state")

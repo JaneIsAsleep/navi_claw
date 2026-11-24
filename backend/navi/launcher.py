@@ -16,6 +16,49 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA = Path(os.environ.get("NAVI_ACCEPTANCE_DATA", ROOT / "data")).resolve()
 URL = "http://127.0.0.1:8766"
 PROJECT = hashlib.sha256((str(ROOT) if DATA == ROOT / "data" else str(ROOT) + ":" + str(DATA)).encode()).hexdigest()[:24]
+STOP_ENTRY = "stop-windows.cmd" if os.name == "nt" else "stop.command"
+STATUS_ENTRY = "status-windows.cmd" if os.name == "nt" else "status.command"
+
+
+def detached_process_options(platform=None):
+    platform = os.name if platform is None else platform
+    if platform == "nt":
+        return {
+            "creationflags": (
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+                | getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
+                | getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+            )
+        }
+    return {"start_new_session": True}
+
+
+def process_alive(pid):
+    if os.name == "nt":
+        import ctypes
+
+        process_query_limited_information = 0x1000
+        synchronize = 0x00100000
+        still_active = 259
+        handle = ctypes.windll.kernel32.OpenProcess(
+            process_query_limited_information | synchronize, False, pid
+        )
+        if not handle:
+            return ctypes.get_last_error() == 5
+        try:
+            exit_code = ctypes.c_ulong()
+            if not ctypes.windll.kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return True
+            return exit_code.value == still_active
+        finally:
+            ctypes.windll.kernel32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
 
 
 def health():
@@ -57,13 +100,9 @@ def main():
             time.sleep(0.1)
             current = health()
             if current is None or current.get("instance") != state["instance"]:
-                try:
-                    os.kill(state["pid"], 0)
-                except ProcessLookupError:
+                if not process_alive(state["pid"]):
                     print("Navi 已正常停止，数据已保存。")
                     return
-                except PermissionError:
-                    pass
         raise SystemExit("停止尚未完成，请查看状态与日志。")
     if state and not owned(state):
         raise SystemExit("8766 端口被其他程序占用，未终止该程序。请释放端口后重试。")
@@ -79,7 +118,16 @@ def main():
         os.chmod(DATA, 0o700)
         environment = {**os.environ, "PYTHONPATH": str(ROOT / "backend")}
         with (DATA / "gateway.log").open("ab") as log:
-            process = subprocess.Popen([sys.executable, "-m", "navi.server"], cwd=ROOT, env=environment, stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True, close_fds=True)
+            process = subprocess.Popen(
+                [sys.executable, "-m", "navi.server"],
+                cwd=ROOT,
+                env=environment,
+                stdin=subprocess.DEVNULL,
+                stdout=log,
+                stderr=log,
+                close_fds=True,
+                **detached_process_options(),
+            )
         for _ in range(150):
             state = health()
             if owned(state) and state["ready"]:
@@ -90,10 +138,10 @@ def main():
         else:
             raise SystemExit(f"启动未就绪，请查看 {DATA / 'gateway.log'}")
     if not state["ready"]:
-        raise SystemExit("Gateway 正在准备，请稍后使用 status.command。")
+        raise SystemExit(f"Gateway 正在准备，请稍后使用 {STATUS_ENTRY}。")
     if not args.no_browser:
         webbrowser.open(URL)
-    print(f"Navi 已就绪：{URL}\n此终端窗口可以关闭，后台会继续运行。\n真正停止请双击 stop.command。")
+    print(f"Navi 已就绪：{URL}\n此终端窗口可以关闭，后台会继续运行。\n真正停止请双击 {STOP_ENTRY}。")
 
 
 if __name__ == "__main__":

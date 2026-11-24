@@ -6,17 +6,17 @@
 
 ## 开始使用
 
-新机器先按下文执行 `./setup` 准备依赖和前端。macOS 双击 `start.command`，Windows/WSL2 在 Ubuntu 终端执行 `./start.command`，就绪后打开 [Navi](http://127.0.0.1:8766)。重复启动复用已有后台。
+macOS/WSL 新机器先按下文执行 `./setup` 准备依赖和前端。macOS 双击 `start.command`；Windows 双击 `Navi.exe` 打开独立桌面窗口，或双击 `start-windows.cmd` 使用浏览器。Windows 无需安装 Ubuntu、WSL、Python 或 Node.js，首次启动会自动准备独立的运行环境。重复启动复用已有后台。
 
-启动完成后，启动终端窗口可以关闭。关闭浏览器也不会停止任务。真正停止请双击 `stop.command`；查看状态、入口和日志请双击 `status.command`。
+启动完成后，启动终端窗口可以关闭。关闭浏览器也不会停止任务。macOS/WSL 使用 `stop.command` 和 `status.command`；Windows 使用 `stop-windows.cmd` 和 `status-windows.cmd`。
 
 使用 `./run` 会在前台运行，需要保留终端，按 `Ctrl+C` 正常停止。请先停止后台再使用前台入口。
 
 重启保留会话、记忆、目标、调度、作业、审批、消息和成果。电脑休眠或停止后台期间不执行检查，恢复后每个调度最多补做一次最近错过的检查，不补跑全部周期。
 
-新机器首次准备需要 Python 3.12、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和 [Node.js](https://nodejs.org/en/download) 22.12 或更高版本。在项目目录执行 `./setup`，再双击启动。Python 与前端分别由 `uv.lock` 和 `frontend/package-lock.json` 锁定依赖。
+原生 Windows 首次双击 `Navi.exe` 或 `start-windows.cmd` 时会自动准备 Python、依赖和前端，不需要管理员权限，首次准备需要网络。macOS/Linux 与 WSL2 仍需 Python 3.12、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和 [Node.js](https://nodejs.org/en/download) 22.12 或更高版本，执行 `./setup` 后双击 `start.command`。Python 与前端分别由 `uv.lock` 和 `frontend/package-lock.json` 锁定依赖。
 
-Windows 组员使用 WSL2 的 Ubuntu 运行当前版本。后端使用 Unix 文件锁，启动入口也是 shell 脚本；当前没有原生 Windows 运行验证。在管理员 PowerShell 中执行以下命令，按提示重启并完成 Ubuntu 首次配置，见 [Microsoft 安装说明](https://learn.microsoft.com/en-us/windows/wsl/install)。
+Windows 也可继续使用 WSL2 的 Ubuntu 运行原入口。在管理员 PowerShell 中执行以下命令，按提示重启并完成 Ubuntu 首次配置，见 [Microsoft 安装说明](https://learn.microsoft.com/en-us/windows/wsl/install)。
 
 ```powershell
 wsl --install -d Ubuntu
@@ -39,11 +39,11 @@ cd navi_claw
 ./start.command
 ```
 
-在 Windows 浏览器打开 [Navi](http://localhost:8766)，首次使用在设置页填写自己的 DeepSeek 密钥。[Microsoft 的 WSL 网络说明](https://learn.microsoft.com/en-us/windows/wsl/networking) 支持从 Windows 浏览器通过 localhost 访问 Linux 服务。本项目的 Windows/WSL2 实机验收仍需组员首次安装时完成；WSL 退出、Windows 休眠或关机期间无法执行后台任务。无需双击 `.command` 文件，在 Ubuntu 终端执行 `./stop.command`、`./status.command` 即可。
+在 Windows 浏览器打开 [Navi](http://localhost:8766)，首次使用在设置页填写自己的 DeepSeek 密钥。[Microsoft 的 WSL 网络说明](https://learn.microsoft.com/en-us/windows/wsl/networking) 支持从 Windows 浏览器通过 localhost 访问 Linux 服务。WSL2 作为兼容方式保留；WSL 退出、Windows 休眠或关机期间无法执行后台任务。无需双击 `.command` 文件，在 Ubuntu 终端执行 `./stop.command`、`./status.command` 即可。
 
 仓库共享源码、锁定依赖、工程资料与验证代码。个人密钥、数据库、聊天状态和原始私人文本证据留在忽略版本控制的 `data/` 中；截图材料按用户确认共享。`engineering/requirements/修改队列.xlsx` 含敏感截图，只保存在维护者本机，克隆仓库不会获得该文件；对应需求见计划与已共享证据。每位组员独立创建本机状态，完整备份仅用于本机恢复。历史日志中的旧提交号保存在维护者本机归档分支，小组仓库从脱敏后的开发基线开始；旧阶段的验收材料仍随仓库保留。开发时从最新 `main` 创建功能分支，通过 Pull Request 汇合；提交前执行 `./test` 和 `npm --prefix frontend run build`。`./test --live` 会使用当前机器的密钥并消耗模型额度。
 
-更新前先保存自己分支的工作。回到 `main` 后执行 `./stop.command`、`git pull --ff-only`、`./setup`、`./test`、`./start.command`，使后端和前端加载更新后的版本。
+更新前先保存自己分支的工作。回到 `main` 后先停止当前平台的后台入口，执行 `git pull --ff-only`，Windows 再双击 `Navi.exe` 或 `start-windows.cmd`；macOS/WSL 执行 `./setup`、`./test`、`./start.command`，使后端和前端加载更新后的版本。
 
 在[本机设置页](http://127.0.0.1:8766/#settings)填写 DeepSeek 密钥，无需发到聊天里。本次真实验证使用 `deepseek-flash` 与 Messages 协议。模型名称可修改，只有实际连接检查成功才代表你的账户可用。接口参考 [DeepSeek 官方英文实现](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/llm/llm-deepseek/README.md)。
 
@@ -65,6 +65,10 @@ cd navi_claw
 
 | 入口 | 用途 |
 |---|---|
+| `Navi.exe` | Windows 独立窗口启动入口 |
+| `start-windows.cmd` | Windows 浏览器启动入口，首次自动准备依赖 |
+| `stop-windows.cmd` | Windows 原生双击停止本项目后台 |
+| `status-windows.cmd` | Windows 原生查看状态、入口和日志 |
 | `./test` | 离线测试，不调用付费 API |
 | `./test --live` | 真实 DeepSeek 验收，使用隔离固定样例，消耗模型额度 |
 | `./test --live --refinement` | 产品真实闭环验收，保留原有组并覆盖 L01 至 L04、自动恢复、目标生命周期、全文搜索、自定义来源和图文讨论 |

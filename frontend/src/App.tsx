@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowUp, BookOpen, Check, ChevronRight, ChevronLeft, Heart, Users, Wallet, Briefcase, Palette, Zap, Copy, Download, FileText, Flag, Lightbulb, Menu, MessageCircle, MoreHorizontal, Plus, Radio, Search, Settings, Square, X } from 'lucide-react'
 import { api, browserTimezone, labels, localDate, terminal, time, type Action, type CheckItem, type Config, type FeedImage, type GoalSetup, type GoalCard, type Detail, type Editor, type Item, type Job, type Message, type Reference, type Schedule, type Session, type State, type Tab } from './data'
 import type { EndpointProfile, EndpointUrls, Protocol } from './data'
@@ -113,6 +113,23 @@ export default function App() {
   const pending = state?.actions.filter(row => row.status === 'pending').length || 0
   const modalOpen = Boolean(editor || deletion || audit)
   const overlayOpen = modalOpen || searchOpen || !!idea || sourcesOpen || completedOpen || !!goalCategory || !!feedImage || !!endpointToDelete || !!mainReset
+
+  function resizeInput(element: HTMLTextAreaElement | null = inputRef.current) {
+    if (!element) return
+    element.style.height = '0px'
+    const styles = getComputedStyle(element)
+    const minimum = parseFloat(styles.minHeight) || 0
+    const maximum = Math.min(170, window.innerHeight * 0.32)
+    element.style.height = `${Math.min(Math.max(element.scrollHeight, minimum), maximum)}px`
+    element.style.overflowY = element.scrollHeight > maximum ? 'auto' : 'hidden'
+  }
+
+  useLayoutEffect(() => {
+    const update = () => resizeInput()
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [input, sessionId, page, paired])
 
   function saveDraft(text: string, refs = references, kind = composerKind) {
     setInput(text); setReferences(refs); setComposerKind(kind)
@@ -483,7 +500,7 @@ export default function App() {
         <div className={s.composerArea}>
           {feedReply?.session === sessionId && references.some(ref => ref.id === feedReply.id) && <p className={s.feedReply}>正在回复 Navi · {feedReply.title}</p>}
           {references.length > 0 && <div className={s.references}>{references.map(ref => <div className={s.reference} key={ref.id}><details><summary>引用：{ref.title}</summary><p>{ref.body}</p>{ref.source_url && <a href={ref.source_url} target="_blank" rel="noreferrer">原始来源</a>}</details><button className={s.iconButton} aria-label={'移除引用 ' + ref.title} onClick={() => saveDraft(input, references.filter(r => r.id !== ref.id))}><X size={16} /></button></div>)}</div>}
-          <form className={s.composer} onSubmit={event => { event.preventDefault(); void submit() }}><div className={s.rowActions}><button type="button" className={chatSearch ? s.secondary : s.textButton} aria-pressed={chatSearch} disabled={working || !connected || archived} onClick={toggleChatSearch}>联网搜索{chatSearch ? '已开启' : '已关闭'}</button>{chatSearch && <span className={s.subtle}>{savedConnection?.native_search_check === 'supported' ? '优先 DeepSeek 原生搜索' : searchProviders[savedConnection?.web_search_provider ?? 'bocha']}</span>}</div><textarea ref={inputRef} aria-label="消息内容" placeholder={archived ? '解封后继续话题' : '和 Navi 说点什么'} disabled={archived} rows={2} value={input} onChange={event => saveDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className={s.composerTools}><span className={s.subtle}>{input ? '草稿保存在本机' : 'Enter 发送 · Shift + Enter 换行'}</span>{busy ? <button type="button" className={s.send} aria-label="停止当前作业" onClick={() => actPath('/jobs/' + busy.id + '/cancel', 'POST', {})}><Square size={16} fill="currentColor" /></button> : <button type="submit" className={s.send} aria-label="发送消息" disabled={!input.trim() || working || !connected || archived}><ArrowUp size={20} /></button>}</div></form>
+          <form className={s.composer} onSubmit={event => { event.preventDefault(); void submit() }}><div className={s.rowActions}><button type="button" className={chatSearch ? s.secondary : s.textButton} aria-pressed={chatSearch} disabled={working || !connected || archived} onClick={toggleChatSearch}>联网搜索{chatSearch ? '已开启' : '已关闭'}</button>{chatSearch && <span className={s.subtle}>{savedConnection?.native_search_check === 'supported' ? '优先 DeepSeek 原生搜索' : searchProviders[savedConnection?.web_search_provider ?? 'bocha']}</span>}</div><textarea ref={inputRef} aria-label="消息内容" placeholder={archived ? '解封后继续话题' : '和 Navi 说点什么'} disabled={archived} rows={2} value={input} onChange={event => { resizeInput(event.currentTarget); saveDraft(event.target.value) }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className={s.composerTools}><span className={s.subtle}>{input ? '草稿保存在本机' : 'Enter 发送 · Shift + Enter 换行'}</span>{busy ? <button type="button" className={s.send} aria-label="停止当前作业" onClick={() => actPath('/jobs/' + busy.id + '/cancel', 'POST', {})}><Square size={16} fill="currentColor" /></button> : <button type="submit" className={s.send} aria-label="发送消息" disabled={!input.trim() || working || !connected || archived}><ArrowUp size={20} /></button>}</div></form>
         </div>
 </ChatPanel>
   return <div className={s.app} onClickCapture={event => { const target = (event.target as Element).closest<HTMLElement>('button, a'); if (target) interaction.current = target }}>

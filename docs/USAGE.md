@@ -1,6 +1,6 @@
 # Navi 使用说明
 
-本机入口为 [Navi](http://127.0.0.1:8766)。DeepSeek 密钥留在本机，最近实际验证的模型为 `deepseek-flash`，使用 Messages 协议。检查当前服务使用 `status.command`。
+本机入口为 [Navi](http://127.0.0.1:8766)。DeepSeek 密钥留在本机，最近实际验证的模型为 `deepseek-flash`，使用 Messages 协议。检查当前服务使用对应平台的 `status.command` 或 `status-windows.cmd`。
 
 在网页聊天输入框上方开启「联网搜索」。开关按对话保存，默认关闭。「设置 → DeepSeek 连接 → 测试原生搜索」会用当前模型、Endpoint、协议和密钥发一次真实请求，收到成功的服务端搜索回执才算通过。更换连接配置后，显示该配置的测试状态。通过后，普通问答直接启用 DeepSeek 原生搜索；同一轮需要本地工具时，Navi 单独执行原生搜索，再处理本地任务。未验证通过时使用所选第三方服务；原生搜索实际失败时也可回退。原生搜索返回零结果或未执行搜索时不回退。接口依据 [DeepSeek Web Tools](https://api-docs.deepseek.com/guides/web_tools/)。
 
@@ -8,9 +8,9 @@
 
 网页「设置 → DeepSeek 连接」默认使用官方地址，Messages 为 `https://api.deepseek.com/anthropic/v1/messages`，Chat Completions 为 `https://api.deepseek.com/chat/completions`。在 Endpoint 下拉菜单选「添加 Endpoint…」，按服务商文档填写两条完整 URL。Messages 常见路径是 `/v1/messages`，Chat Completions 常见路径是 `/v1/chat/completions`。Navi 按所选协议直接使用对应 URL，不追加路径。每组两条 URL 共用一个本机密钥，各组密钥独立。选中已保存的配置并保存即可切换，也可复制后修改或确认删除。删除时一并移除该组密钥，删除当前配置会切回官方连接。旧前缀会在启动时迁移成一组按旧规则生成的 URL，迁移后请按服务商文档核对，再用「真实连接检查」验证所选协议。自定义服务会收到模型请求中的相关对话上下文，请仅填写可信地址。
 
-项目根目录为本机克隆的 `navi_claw` 文件夹。Windows/WSL2 的首次安装见 [README](../README.md)。
+项目根目录为本机克隆的 `navi_claw` 文件夹。Windows 双击 `Navi.exe` 或 `start-windows.cmd` 启动，首次运行会自动准备环境；停止与状态分别双击 `stop-windows.cmd`、`status-windows.cmd`。完整首次安装说明见 [README](../README.md)。
 
-macOS 双击项目根目录的 `start.command` 启动，Windows/WSL2 在 Ubuntu 终端执行 `./start.command`。看到“已就绪”后可以关闭启动终端，WSL 环境仍须保持运行。关闭浏览器也不会停止后台。普通提醒实际投递到创建对话，封存期间转主对话并标明来源。真正关闭使用同目录的 `stop.command`；`status.command` 可查看状态、入口和日志位置。不要直接打开 `frontend/index.html`。
+macOS 双击项目根目录的 `start.command`，Windows/WSL2 仍可在 Ubuntu 终端执行 `./start.command`。看到“已就绪”后可以关闭启动终端，WSL 环境仍须保持运行。关闭浏览器也不会停止后台。普通提醒实际投递到创建对话，封存期间转主对话并标明来源。真正关闭使用当前平台对应的停止入口；状态入口可查看状态、入口和日志位置。不要直接打开 `frontend/index.html`。
 
 如果使用 `./run` 前台启动，需要保留该终端，按 `Ctrl+C` 停止。请先停止后台，再使用这个入口。电脑休眠、关机或后台停止期间不执行任务；恢复后，每个调度最多补做一次最近错过的检查。
 

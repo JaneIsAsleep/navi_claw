@@ -74,7 +74,7 @@
 .welcome p { color: var(--muted); }
 .composerArea { flex-shrink: 0; padding: 12px 32px 24px; max-width: 900px; width: 100%; align-self: center; background: white; }
 .composer { border: 1px solid var(--line); padding: 14px 16px 10px; border-radius: 20px; box-shadow: 0 2px 10px #222a3009; }
-.composer textarea { display: block; width: 100%; min-height: 52px; max-height: 170px; resize: vertical; border: 0; background: transparent; font-size: 16px; line-height: 1.8; }
+.composer textarea { display: block; width: 100%; min-height: 3.6em; max-height: min(170px, 32dvh); resize: none; overflow-y: hidden; scrollbar-gutter: stable; border: 0; padding: 0; background: transparent; font-size: 16px; line-height: 1.8; overscroll-behavior: contain; }
 .composerTools { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 8px; }
 .composerTools .subtle { font-size: 12px; }
 .send { border: 0; background: var(--accent); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
@@ -203,7 +203,6 @@
   .messageActions { opacity: 1; }
   .composerArea { padding: 8px 12px max(12px, env(safe-area-inset-bottom)); }
   .composer { padding: 10px 12px 8px; }
-  .composer textarea { min-height: 44px; }
   .composerTools .subtle { font-size: 12px; }
   .pageContent { padding: 28px 20px 48px; }
   .pageIntro { margin-bottom: 24px; }
