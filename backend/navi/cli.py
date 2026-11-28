@@ -1,10 +1,14 @@
 import argparse
+import getpass
 import json
 import sys
 import time
+import warnings
 from urllib.parse import quote
 
 import httpx
+
+from .web_search import SEARCH_PROVIDERS
 
 
 class CLIAdapter:
@@ -13,7 +17,7 @@ class CLIAdapter:
 
     def call(self, method, path, values=None):
         try:
-            response = httpx.request(method, self.url + "/api" + path, json=values if values is not None else {}, timeout=15)
+            response = httpx.request(method, self.url + "/api" + path, json=values if values is not None else {}, timeout=15, trust_env=False)
             if response.is_error:
                 raise ValueError(response.json().get("detail", "请求失败"))
             return response.json()
@@ -26,6 +30,18 @@ class CLIAdapter:
             if job["status"] in {"succeeded", "failed", "timed_out", "cancelled"}:
                 return job
             time.sleep(0.3)
+
+
+def read_search_key():
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", getpass.GetPassWarning)
+            key = getpass.getpass("搜索服务 API 密钥：").strip()
+    except (getpass.GetPassWarning, EOFError, KeyboardInterrupt):
+        raise ValueError("请输入密钥，请使用支持隐藏输入的终端") from None
+    if not key:
+        raise ValueError("搜索服务 API 密钥不能为空")
+    return key
 
 
 def main():
@@ -43,8 +59,20 @@ def main():
     for name in ("chat", "ideas", "draft", "compact"):
         p = sub.add_parser(name)
         p.add_argument("text", nargs="?", default="压缩当前会话" if name == "compact" else "根据我的目标和关注事项给出建议" if name == "ideas" else "")
-        p.add_argument("--session")
+        target = p.add_mutually_exclusive_group()
+        target.add_argument("--session", help="指定会话 ID，默认使用主对话")
+        if name == "chat":
+            target.add_argument("--new-session", action="store_true", help="新建副对话并发送消息")
+            p.add_argument("--web-search", action=argparse.BooleanOptionalAction, help="开启或关闭此会话的联网搜索，并保存开关")
         p.add_argument("--wait", action="store_true")
+    p = sub.add_parser("web-search", help="查看或设置单个对话的联网搜索开关")
+    p.add_argument("operation", choices=["status", "on", "off"], nargs="?", default="status")
+    p.add_argument("--session", help="指定未封存的会话 ID，默认使用主对话")
+    p = sub.add_parser("search-settings", help="查看或修改与 Web 共用的第三方搜索服务")
+    p.add_argument("--provider", choices=SEARCH_PROVIDERS, help="选择第三方搜索服务")
+    p.add_argument("--set-key", action="store_true", help="以隐藏输入保存所选服务的密钥")
+    p = sub.add_parser("check-native-search", help="测试当前模型连接的 DeepSeek 原生搜索")
+    p.add_argument("--wait", action="store_true")
     p = sub.add_parser("messages")
     p.add_argument("session")
     sub.add_parser("schedules")
@@ -92,7 +120,37 @@ def main():
             values = {"title": args.title} if name == "rename-session" else {"operation": "archive" if name == "archive-session" else "unarchive"}
             result = adapter.call("PATCH", f"/sessions/{args.id}", values)
         elif name in {"chat", "ideas", "draft", "compact"}:
-            result = adapter.call("POST", "/chat", {"text": args.text, "session_id": args.session, "kind": name})
+            values = {"text": args.text, "session_id": args.session, "kind": name}
+            if name == "chat":
+                if args.new_session:
+                    values["new_session"] = True
+                if args.web_search is not None:
+                    values["web_search_enabled"] = args.web_search
+            result = adapter.call("POST", "/chat", values)
+            if args.wait:
+                result = adapter.wait(result["id"])
+        elif name == "web-search":
+            identity = args.session
+            if args.operation == "status" or identity is None:
+                state = adapter.call("GET", "/state")
+                identity = identity or state["main_session_id"]
+            if args.operation == "status":
+                session = next((row for row in state["sessions"] if row["id"] == identity), None)
+                if session is None:
+                    raise ValueError("对话不可用，请确认 ID 且对话未封存")
+            else:
+                session = adapter.call("PUT", f"/sessions/{quote(identity, safe='')}/web-search", {"enabled": args.operation == "on"})
+            result = {"session_id": session["id"], "web_search_enabled": bool(session["web_search_enabled"])}
+        elif name == "search-settings":
+            values = {}
+            if args.provider:
+                values["web_search_provider"] = args.provider
+            if args.set_key:
+                values["web_search_api_key"] = read_search_key()
+            settings = adapter.call("PUT", "/settings", values) if values else adapter.call("GET", "/state")["settings"]
+            result = {key: settings[key] for key in ("web_search_provider", "web_search_keys_configured", "native_search_check")}
+        elif name == "check-native-search":
+            result = adapter.call("POST", "/settings/check-native-search")
             if args.wait:
                 result = adapter.wait(result["id"])
         elif name == "messages":

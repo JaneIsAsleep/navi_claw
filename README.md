@@ -84,9 +84,20 @@ cd navi_claw
 | `./navi reject <action-id> --hash <content-hash>` | 拒绝，零投递 |
 | `./navi evidence <job-id>` | 导出关联作业证据 |
 
+CLI 与 Web 共用每个未封存对话的联网搜索开关。不指定 `--session` 或 `--new-session` 时使用主对话。`chat` 省略开关参数时沿用会话已保存的设置。示例中的 `SESSION_ID` 取自第一条命令返回的 `session_id`。
+
+```sh
+./navi chat '联网搜索 Python 官方发布消息并附上来源' --new-session --web-search --wait
+./navi web-search status --session "$SESSION_ID"
+./navi web-search off --session "$SESSION_ID"
+./navi chat '整理刚才查到的信息' --session "$SESSION_ID" --no-web-search --wait
+```
+
+`web-search on` 可以预先开启指定对话。`./navi search-settings` 查看当前第三方服务、密钥配置状态和原生搜索测试结果。`./navi search-settings --provider brave --set-key` 选择服务并通过隐藏输入保存密钥，可选服务为 `bocha`、`brave`、`anysearch`。`./navi check-native-search --wait` 用当前 DeepSeek 连接发起真实测试，会消耗模型额度。联网搜索优先使用通过验证的 DeepSeek 原生搜索，未验证或失败时尝试已配置的第三方服务。
+
 默认单请求 60 秒、作业执行 180 秒、每作业 5 次模型请求与 10 次工具调用、每次输出 4096 tokens。本机每日请求与 token 限制现为 0，表示不按日总量拦截，实际用量继续记账；服务商额度仍由服务商控制。自动内容作业跨延迟恢复累计计算五次请求、十次工具和 60000 tokens，人工审批等待不占执行期限。用量包含缓存输入；费用粗估不区分缓存优惠，以服务商账单为准。失败且缺少完整 usage 回执的请求保守记账。
 
-课程要求与证据对应见 [验收说明](engineering/evidence/01-initial/ACCEPTANCE.md)，模块边界见 [架构说明](engineering/design/ARCHITECTURE.md)，视觉检查见 [Muse 对齐记录](engineering/design/MUSE_ALIGNMENT.md)。配置字段示例见 `docs/config.example.json`，仅作参考，实际设置在网页保存。真实记录在 `engineering/evidence/04-muse-revision-v1/implementation/live-evidence.json`，启动恢复记录在 `engineering/evidence/01-initial/runtime-evidence.json`，界面操作记录在 `engineering/evidence/01-initial/ui-evidence.json`。`engineering/verification/state/live-*` 保存隔离验收状态，不属于日常个人数据。
+课程要求与证据对应见 [验收说明](engineering/evidence/01-initial/ACCEPTANCE.md)，模块边界见 [架构说明](engineering/design/ARCHITECTURE.md)，视觉检查见 [Muse 对齐记录](engineering/design/MUSE_ALIGNMENT.md)。配置字段示例见 `docs/config.example.json`，实际设置可在网页保存。真实记录在 `engineering/evidence/04-muse-revision-v1/implementation/live-evidence.json`，启动恢复记录在 `engineering/evidence/01-initial/runtime-evidence.json`，界面操作记录在 `engineering/evidence/01-initial/ui-evidence.json`。`engineering/verification/state/live-*` 保存隔离验收状态，不属于日常个人数据。
 
 本轮细化开发记录见 [产品细化验收](engineering/evidence/03-refinement/ACCEPTANCE.md)。本轮界面和启动检查使用独立 `engineering/verification/.cache/refinement-preview` 数据，测试内容不进入日常数据。日常数据库首次迁移前自动保存 `data/navi.before-refinement.sqlite3`，旧会话保留为副对话，旧来源缺失的条目明确显示暂无关联对话。
 

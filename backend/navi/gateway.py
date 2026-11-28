@@ -409,6 +409,8 @@ class Gateway:
             session = conn.execute("SELECT * FROM sessions WHERE id=?", (session_id,)).fetchone()
             if not session or session["state"] != "active":
                 raise ValueError("请先明确解封后继续此对话")
+            if web_search_enabled is not None:
+                conn.execute("UPDATE sessions SET web_search_enabled=? WHERE id=?", (web_search_enabled, session_id))
             setup = json.loads(session["goal_setup_json"])
             if setup.get("status") in {"gathering", "confirming"}:
                 if conn.execute("SELECT id FROM jobs WHERE session_id=? AND kind='goal_setup' AND status IN ('pending','running')", (session_id,)).fetchone():
@@ -422,8 +424,6 @@ class Gateway:
                 conn.execute("UPDATE sessions SET goal_setup_json=? WHERE id=?", (packed(setup), session_id))
                 kind = "goal_setup"
             config = self.job_config()
-            if web_search_enabled is not None:
-                conn.execute("UPDATE sessions SET web_search_enabled=? WHERE id=?", (web_search_enabled, session_id))
             config["web_search_enabled"] = bool(session["web_search_enabled"]) if web_search_enabled is None else web_search_enabled
             if timezone is not None:
                 config["timezone"] = timezone
