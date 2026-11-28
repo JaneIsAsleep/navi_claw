@@ -21,4 +21,5 @@
 - 每个阶段提供 start.command、stop.command、status.command，并实际验证脱离终端运行。
 - 验证默认入口为 ./test；真实 API 检查为 ./test --live，不能用离线替身冒充真实结果。
 - 改动只解决计划中的需求。未接入的功能和失败必须如实呈现。
+- 新增、移除或调整功能时同步更新 `docs/FEATURES.md`，核对 CLI、TUI、Web 三端入口和限制。
 - 不自动提交、推送、发布或修改其他项目。
