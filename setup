@@ -1,17 +1,133 @@
 #!/bin/sh
 set -eu
+
 NAVI_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$NAVI_ROOT"
-if ! command -v uv >/dev/null 2>&1; then
-  printf "%s\n" "需要 uv。安装说明：https://docs.astral.sh/uv/getting-started/installation/"
-  exit 1
-fi
-uv sync --locked --python 3.12
-if ! command -v npm >/dev/null 2>&1; then
-  printf "%s\n" "需要 Node.js 22.12 或更高版本：https://nodejs.org/en/download"
-  exit 1
-fi
-cd "$NAVI_ROOT/frontend"
-npm ci
-npm run build
-printf "%s\n" "准备完成。执行 ./start.command 启动 Navi，macOS 也可双击 start.command。"
+
+VENV="$NAVI_ROOT/.venv"
+PYTHON="$VENV/bin/python"
+STAMP="$VENV/.navi-uv-lock"
+LOCK_FILE="$NAVI_ROOT/uv.lock"
+TOOLS="$NAVI_ROOT/.tools"
+NODE_VERSION="22.12.0"
+
+export PATH="$HOME/.local/bin:$PATH"
+
+file_hash() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$LOCK_FILE" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$LOCK_FILE" | awk '{print $1}'
+  else
+    cksum "$LOCK_FILE" | awk '{print $1 "-" $2}'
+  fi
+}
+
+find_uv() {
+  command -v uv 2>/dev/null || true
+}
+
+ensure_uv() {
+  uv_path=$(find_uv)
+  if [ -n "$uv_path" ]; then
+    printf '%s\n' "$uv_path"
+    return
+  fi
+  if ! command -v curl >/dev/null 2>&1; then
+    printf '%s\n' "自动安装 uv 需要 curl，请先安装 curl。" >&2
+    exit 1
+  fi
+  curl -LsSf https://astral.sh/uv/install.sh | sh >&2
+  export PATH="$HOME/.local/bin:$PATH"
+  uv_path=$(find_uv)
+  if [ -z "$uv_path" ]; then
+    printf '%s\n' "uv 安装失败。" >&2
+    exit 1
+  fi
+  printf '%s\n' "$uv_path"
+}
+
+python_ready() {
+  [ -x "$PYTHON" ] && "$PYTHON" -c 'import fastapi, httpx, uvicorn' >/dev/null 2>&1
+}
+
+ensure_python() {
+  lock_hash=$(file_hash)
+  saved_hash=$(cat "$STAMP" 2>/dev/null || true)
+  if python_ready && [ "$saved_hash" = "$lock_hash" ]; then
+    return
+  fi
+  printf '%s\n' "正在准备 Python 环境..."
+  uv_path=$(ensure_uv)
+  UV_LINK_MODE=copy "$uv_path" sync --locked --python 3.12
+  if ! python_ready; then
+    printf '%s\n' "Python 依赖准备失败。" >&2
+    exit 1
+  fi
+  printf '%s' "$lock_hash" > "$STAMP"
+}
+
+node_supported() {
+  command -v node >/dev/null 2>&1 || return 1
+  command -v npm >/dev/null 2>&1 || return 1
+  version=$(node -p 'process.versions.node' 2>/dev/null || true)
+  [ -n "$version" ] || return 1
+  major=${version%%.*}
+  remainder=${version#*.}
+  minor=${remainder%%.*}
+  [ "$major" -gt 22 ] || { [ "$major" -eq 22 ] && [ "$minor" -ge 12 ]; }
+}
+
+ensure_node() {
+  if node_supported; then
+    return
+  fi
+  system=$(uname -s)
+  if [ "$system" != "Linux" ]; then
+    printf '%s\n' "当前系统需要 Node.js 22.12 或更高版本：https://nodejs.org/en/download" >&2
+    exit 1
+  fi
+  machine=$(uname -m)
+  case "$machine" in
+    x86_64|amd64) architecture="x64" ;;
+    aarch64|arm64) architecture="arm64" ;;
+    *)
+      printf '%s\n' "不支持的 Node.js 架构：$machine" >&2
+      exit 1
+      ;;
+  esac
+  folder="node-v$NODE_VERSION-linux-$architecture"
+  node_directory="$TOOLS/$folder"
+  export PATH="$node_directory/bin:$PATH"
+  if node_supported; then
+    return
+  fi
+  mkdir -p "$TOOLS"
+  archive="$TOOLS/$folder.tar.gz"
+  printf '%s\n' "正在下载项目内 Node.js $NODE_VERSION..."
+  curl -fL "https://nodejs.org/dist/v$NODE_VERSION/$folder.tar.gz" -o "$archive"
+  tar -xzf "$archive" -C "$TOOLS"
+  rm -f "$archive"
+  export PATH="$node_directory/bin:$PATH"
+  if ! node_supported; then
+    printf '%s\n' "Node.js 安装失败。" >&2
+    exit 1
+  fi
+}
+
+ensure_frontend() {
+  if [ -f "$NAVI_ROOT/frontend/dist/index.html" ]; then
+    return
+  fi
+  ensure_node
+  printf '%s\n' "正在构建前端..."
+  (
+    cd "$NAVI_ROOT/frontend"
+    npm ci
+    npm run build
+  )
+}
+
+ensure_python
+ensure_frontend
+printf '%s\n' "准备完成。"

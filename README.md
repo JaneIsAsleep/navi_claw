@@ -6,23 +6,23 @@
 
 ## 开始使用
 
-新机器先按下文执行 `./setup` 准备依赖和前端。macOS 双击 `start.command`，Windows/WSL2 在 Ubuntu 终端执行 `./start.command`，就绪后打开 [Navi](http://127.0.0.1:8766)。重复启动复用已有后台。
+macOS/Linux 用户双击或执行 `start.command` 启动，Windows 用户双击 `start-windows.cmd` 启动。启动入口会自动检查并准备缺失的 uv、Python 依赖、Node.js 和前端产物；依赖已完整时直接复用现有环境。就绪后打开 [Navi](http://127.0.0.1:8766)，重复启动复用已有后台。
 
-启动完成后，启动终端窗口可以关闭。关闭浏览器也不会停止任务。真正停止请双击 `stop.command`；查看状态、入口和日志请双击 `status.command`。
+启动完成后，启动终端窗口可以关闭。关闭浏览器也不会停止任务。macOS/Linux 使用 `stop.command` 和 `status.command`；Windows 使用 `stop-windows.cmd` 和 `status-windows.cmd`。
 
 使用 `./run` 会在前台运行，需要保留终端，按 `Ctrl+C` 正常停止。请先停止后台再使用前台入口。
 
-在项目目录执行 `./start.command --no-browser`，再运行 `./navi` 或 `./navi tui`，即可打开全屏终端界面。与 Web 共用会话、搜索设置、提醒和审批。已有环境可用 `uv sync --locked --python 3.12` 安装新增依赖。
+在项目目录执行 `./start.command --no-browser`，再运行 `./navi` 或 `./navi tui`，即可打开全屏终端界面；原生 Windows 使用 `navi-windows.cmd` 或 `navi-windows.cmd tui`。与 Web 共用会话、搜索设置、提醒和审批。已有环境可用 `uv sync --locked --python 3.12` 安装新增依赖。
 
 `F1` 打开命令面板，`F2` 切换侧栏，`Ctrl+N` 新建对话，`Ctrl+Enter` 或 `F8` 发送，`Ctrl+Q` 退出界面。用 `Tab` 切换控件，方向键浏览列表，`Enter` 选择。窄终端默认收起侧栏。
 
-侧栏可以搜索会话标题和正文，并查看目标、提醒、动态、构想、成果、记忆、审批和活动。可以在终端批准或拒绝提案、开始构想、引用动态、切换对话联网和设置原生搜索。目标与提醒也可以在对话中提出。下载成果、编辑订阅来源和配置自定义模型端点可在 Web 完成。
+侧栏可以搜索会话标题和正文，并查看校园、目标、提醒、动态、构想、成果、记忆、审批和活动。校园页展示模型整理后的近期消息与临近 DDL。可以在终端批准或拒绝提案、开始构想、引用动态、切换对话联网和设置原生搜索。目标与提醒也可以在对话中提出。下载成果、编辑订阅来源和配置自定义模型端点可在 Web 完成。
 
 重启保留会话、记忆、目标、调度、作业、审批、消息和成果。电脑休眠或停止后台期间不执行检查，恢复后每个调度最多补做一次最近错过的检查，不补跑全部周期。
 
-新机器首次准备需要 Python 3.12、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和 [Node.js](https://nodejs.org/en/download) 22.12 或更高版本。在项目目录执行 `./setup`，再双击启动。Python 与前端分别由 `uv.lock` 和 `frontend/package-lock.json` 锁定依赖。
+首次准备需要网络。Linux/macOS 会自动安装 [uv](https://docs.astral.sh/uv/getting-started/installation/)；缺少 Node.js 时，Linux 会下载项目内的 22.12 版本，macOS 需要预先安装 Node.js 22.12 或更高版本。Windows 会把运行环境和 Node.js 放在项目目录内，不需要管理员权限。Python 与前端分别由 `uv.lock` 和 `frontend/package-lock.json` 锁定依赖。也可手动执行 `./setup` 或 `setup-windows.cmd` 重新检查环境。
 
-Windows 组员使用 WSL2 的 Ubuntu 运行当前版本。后端使用 Unix 文件锁，启动入口也是 shell 脚本；当前没有原生 Windows 运行验证。在管理员 PowerShell 中执行以下命令，按提示重启并完成 Ubuntu 首次配置，见 [Microsoft 安装说明](https://learn.microsoft.com/en-us/windows/wsl/install)。
+Windows 也可继续使用 WSL2 的 Ubuntu 运行原入口。在管理员 PowerShell 中执行以下命令，按提示重启并完成 Ubuntu 首次配置，见 [Microsoft 安装说明](https://learn.microsoft.com/en-us/windows/wsl/install)。
 
 ```powershell
 wsl --install -d Ubuntu
@@ -45,11 +45,11 @@ cd navi_claw
 ./start.command
 ```
 
-在 Windows 浏览器打开 [Navi](http://localhost:8766)，首次使用在设置页填写自己的 DeepSeek 密钥。[Microsoft 的 WSL 网络说明](https://learn.microsoft.com/en-us/windows/wsl/networking) 支持从 Windows 浏览器通过 localhost 访问 Linux 服务。本项目的 Windows/WSL2 实机验收仍需组员首次安装时完成；WSL 退出、Windows 休眠或关机期间无法执行后台任务。无需双击 `.command` 文件，在 Ubuntu 终端执行 `./stop.command`、`./status.command` 即可。
+在 Windows 浏览器打开 [Navi](http://localhost:8766)，首次使用在设置页填写自己的 DeepSeek 密钥。[Microsoft 的 WSL 网络说明](https://learn.microsoft.com/en-us/windows/wsl/networking) 支持从 Windows 浏览器通过 localhost 访问 Linux 服务。WSL2 作为兼容方式保留；WSL 退出、Windows 休眠或关机期间无法执行后台任务。无需双击 `.command` 文件，在 Ubuntu 终端执行 `./stop.command`、`./status.command` 即可。
 
 仓库共享源码、锁定依赖、工程资料与验证代码。个人密钥、数据库、聊天状态和原始私人文本证据留在忽略版本控制的 `data/` 中；截图材料按用户确认共享。`engineering/requirements/修改队列.xlsx` 含敏感截图，只保存在维护者本机，克隆仓库不会获得该文件；对应需求见计划与已共享证据。每位组员独立创建本机状态，完整备份仅用于本机恢复。历史日志中的旧提交号保存在维护者本机归档分支，小组仓库从脱敏后的开发基线开始；旧阶段的验收材料仍随仓库保留。开发时从最新 `main` 创建功能分支，通过 Pull Request 汇合；提交前执行 `./test` 和 `npm --prefix frontend run build`。`./test --live` 会使用当前机器的密钥并消耗模型额度。
 
-更新前先保存自己分支的工作。回到 `main` 后执行 `./stop.command`、`git pull --ff-only`、`./setup`、`./test`、`./start.command`，使后端和前端加载更新后的版本。
+更新前先保存自己分支的工作。回到 `main` 后先停止当前平台的后台入口，执行 `git pull --ff-only`，再通过对应平台的启动入口自动检查环境；macOS/Linux 也可执行 `./setup`、`./test`、`./start.command`。
 
 在[本机设置页](http://127.0.0.1:8766/#settings)填写 DeepSeek 密钥，无需发到聊天里。本次真实验证使用 `deepseek-flash` 与 Messages 协议。模型名称可修改，只有实际连接检查成功才代表你的账户可用。接口参考 [DeepSeek 官方英文实现](https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/llm/llm-deepseek/README.md)。
 
@@ -61,6 +61,10 @@ cd navi_claw
 
 动态消息右上菜单提供关注说明与来源管理，保留 [OpenAI 官方动态](https://openai.com/news/rss.xml)、[Python 官方博客](https://blog.python.org/feeds/posts/default?alt=rss) 和 [NASA 官方新闻](https://www.nasa.gov/news-release/feed/)，也可预览后确认添加公开 HTTPS RSS/Atom，随时暂停或恢复。每日当地 06:00 自动排入关注内容和构想作业，优先处理用户聊天。启动或检测到运行间断后，等待连续清醒六十秒再处理自动内容；网络或休眠中断最多延迟恢复两次，分别等待十、三十分钟，沿用同一作业 ID。只补最近一个已到的批次，成功批次不重跑，失败保留上一批。生成时间按实际完成记录。
 
+校园页可使用南科大 CAS 连接校园平台。点击“使用独立浏览器登录”后，Navi 打开唯一一个独立 Edge 窗口并进入真实 CAS 页面，在窗口中完成账号密码和滑块验证。TIS 与 Blackboard 的后续跳转都在同一个窗口中完成，不创建额外窗口。登录成功后窗口最小化并保留本次校园会话；退出 CAS 或停止 Navi 时关闭。系统 Edge 与 Navi 使用相互隔离的浏览器会话，因此系统 Edge 已登录不会自动共享给 Navi。密码只用于本次 CAS 登录，不写入数据库或会话文件；本机仅保存加密后的平台会话。Blackboard 看板只保留近期消息和临近 DDL，作业与考试统一归入 DDL，并交给当前模型生成总览和任务摘要；已过期或重复事项会被过滤，页面只在存在已验证的 Blackboard 地址时提供外部入口。看板缓存一小时；缓存过期后先继续显示旧内容并在后台更新，校园页可见时每五分钟检查一次缓存，手动刷新会立即重新读取并整理。聊天中使用校园内容时，相关结构化信息会发送给当前模型服务；Cookie 和密码不会发送给模型。会话失效时需要重新登录。
+
+校园接口、登录状态机、缓存策略和分支合并适配清单见 [校园平台集成说明](docs/CAMPUS_INTEGRATION.md)。
+
 关注内容为零至五条，通常每条两段、140 至 300 字，资料不足时允许更短。先读取订阅中的正文，必要时只补读订阅已提供的文章链接，记录实际读取范围。来源配图通过本机校验代理读取，图片失败保留图标、正文与来源。列表每次加载二十条，支持继续浏览及失败重试。点击“讨论”保持右侧动态，在左侧现有聊天挂上可移除的引用，保留草稿，不自动发送；窄屏在动态和聊天之间切换。构想成功后一次替换为五条，详情的“现在就开始”立即新建副对话、自动发送并启动工作。
 
 任务页的本机关注事项也会进入简报，其来源链接仅用于标注。Heartbeat 使用当前工作流筛选本机事项与订阅，结果为空或没有变化时保持安静；来源读取失败会形成错误记录。使用“优先事项”工作流才能将没有截止时间的 RSS 纳入提醒，“临近截止”工作流仅选有截止日期的事项。构想由真实模型结合有效记忆、目标与关注事项生成，成果库仅提供查看和下载，聊天仍可准备文档提案。生成内容基于实际读取资料，重要事实仍应打开原始来源核对。
@@ -71,11 +75,17 @@ cd navi_claw
 
 | 入口 | 用途 |
 |---|---|
+| `start-windows.cmd` | Windows 原生启动，首次自动准备环境 |
+| `stop-windows.cmd` | Windows 原生停止本项目后台 |
+| `status-windows.cmd` | Windows 原生查看状态、入口和日志 |
+| `setup-windows.cmd` | Windows 手动检查并修复运行环境 |
 | `./test` | 离线测试，不调用付费 API |
 | `./test --live` | 真实 DeepSeek 验收，使用隔离固定样例，消耗模型额度 |
 | `./test --live --refinement` | 产品真实闭环验收，保留原有组并覆盖 L01 至 L04、自动恢复、目标生命周期、全文搜索、自定义来源和图文讨论 |
 | `./navi --help` | 查看 CLI Adapter 命令 |
 | `./navi sessions` | 查看与 Web 相同的会话 |
+| `./navi campus [--refresh]` | 查看 Blackboard 近期消息与 DDL，可强制刷新模型摘要 |
+| `navi-windows.cmd campus [--refresh]` | Windows 原生查看校园看板；无参数运行 `tui` |
 | `./navi search-sessions '标题'` | 完整标题搜索，包含封存话题 |
 | `./navi rename-session <id> '新标题'` | 重命名副对话 |
 | `./navi archive-session <id>` / `unarchive-session` | 明确封存或解封 |

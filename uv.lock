@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = "==3.12.*"
 
 [[package]]
@@ -75,6 +75,16 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/56/4f/f7c30a73127e0a8bbffe788369b8359e530b01ae06e2757936fa35bc5e6d/fastapi-0.142.2.tar.gz", hash = "sha256:06366626f2e70576367714d9ab2fe8472e6c8456dba69b399f9f797ab5e92570", size = 466721, upload-time = "2026-09-30T09:51:11.277Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/b6/78aaf9141fb46742928c113f3cf6ef2259d538cb02b604b7656c1dc9883c/fastapi-0.142.2-py3-none-any.whl", hash = "sha256:bd5f4d81f1e93a88bcd77caf4dfe3c2dbffc3805407a0007e9a114c18b3a670b", size = 144409, upload-time = "2026-09-30T09:51:09.8Z" },
+]
+
+[[package]]
+name = "greenlet"
+version = "3.5.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/6e/0091f175ccd02b02bc8811bbcbcc6ac2e980be116e3b2f7a736ca322bf84/greenlet-3.5.6.tar.gz", hash = "sha256:8e67c43bdfc88d5fee6db0d3e40175b362fc95fb85f0412d233b9b203c53a575", size = 207653, upload-time = "2026-09-14T15:42:51.806Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/71/d79f1791f824f8ff15c2978746640467ae932a2365e0201069f7f272395f/greenlet-3.5.6-cp312-cp312-win_amd64.whl", hash = "sha256:7ac4abb3877c43af320392c664774eef6fa2cc063c79a55fc02d844a3cbe7395", size = 324203, upload-time = "2026-09-14T14:22:54.504Z" },
+    { url = "https://files.pythonhosted.org/packages/63/af/42aca4d56e8cb321912203069d8d34734cb288222f10ad2ae102718cc577/greenlet-3.5.6-cp312-cp312-win_arm64.whl", hash = "sha256:301102a49120b095e72a7838792b41233975fc1c155daec6d98f81c00c9280e0", size = 308310, upload-time = "2026-09-14T14:24:03.008Z" },
 ]
 
 [[package]]
@@ -186,7 +196,9 @@ source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
+    { name = "playwright", marker = "sys_platform == 'win32'" },
     { name = "textual" },
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
     { name = "uvicorn" },
 ]
 
@@ -200,7 +212,9 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "playwright", marker = "sys_platform == 'win32'", specifier = ">=1.50,<2" },
     { name = "textual", specifier = ">=6,<7" },
+    { name = "tzdata", marker = "sys_platform == 'win32'", specifier = ">=2024.1" },
     { name = "uvicorn", specifier = ">=0.30,<1" },
 ]
 
@@ -238,6 +252,20 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d6/96/549558270586699a271a18b1111482dc3fc39baa0ef61d183e230d2c961d/platformdirs-4.14.9.tar.gz", hash = "sha256:c6b188e03ffd4dfe1bf8c4bcb47cd94711af244a9852dbff60297bd753684d5d", size = 87729, upload-time = "2026-11-27T20:53:44.721Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/e7/fc53dfd2f9469cce9be9c58385bdcdb5087e790c135c9dadd4cc8401bb3d/platformdirs-4.14.9-py3-none-any.whl", hash = "sha256:d0d3a23e7ff282cfa94b77f5a22b81030dcb68ba0430f90c74f4bd8d090782ea", size = 94272, upload-time = "2026-11-27T20:53:43.511Z" },
+]
+
+[[package]]
+name = "playwright"
+version = "1.65.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "greenlet" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b9/33/151d28773e930d0d438b73e5dcd29b418da65150f9ad05ddd772b275395e/playwright-1.65.2.tar.gz", hash = "sha256:8b031f81de9cdbe8550d8fe8b58dba47d96239e53177ee4cd47dab0fff07a87e", size = 10225683, upload-time = "2026-11-14T00:29:11.246Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7a/e7/9fa224de4a94d7754a0654b369170fa5069274036061d0393b3a2f6a6c17/playwright-1.65.2-py3-none-win32.whl", hash = "sha256:4476703bcdd1a2db06f5db5136af7c02552b1bb519d5fa4b94a8eead2a6a41ba", size = 42673857, upload-time = "2026-11-14T00:29:00.608Z" },
+    { url = "https://files.pythonhosted.org/packages/51/9b/f071a3f3250017941a9d0ae27b8fe4deb141ce37b6b9fa176ff5bf8f34df/playwright-1.65.2-py3-none-win_amd64.whl", hash = "sha256:d0aec9e1c97b6f497f3d9f2ad6e1b7f299968e61239d71f100298b0690f3c776", size = 42673865, upload-time = "2026-11-14T00:29:04.628Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/fe/ac7ee06f2a674f51577c4fa3690151e3c9147510cc1e08c8ad69eef35c03/playwright-1.65.2-py3-none-win_arm64.whl", hash = "sha256:33a224fba3fb72c5fa7eda49535b265c292f1fb87949c769754f9fcd0f5be2de", size = 38405357, upload-time = "2026-11-14T00:29:08.463Z" },
 ]
 
 [[package]]
@@ -394,6 +422,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/26/b09b8010994eccc3c09092e6b34058f36a460eea2d4c3e8b910c695975a0/typing_inspection-0.4.4.tar.gz", hash = "sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47", size = 76928, upload-time = "2026-08-12T12:37:25.997Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl", hash = "sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147", size = 14750, upload-time = "2026-08-12T12:37:24.648Z" },
+]
+
+[[package]]
+name = "tzdata"
+version = "2026.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/29/6a1391d31cd00ff9e927215a224a880e1e84e826b64ba80a499e51c074d8/tzdata-2026.6.tar.gz", hash = "sha256:85d2cd9c09f81f0bb29db27759fc83af4f1e620efb814f8c5bf8b4cc4feece6d", size = 201017, upload-time = "2026-10-28T09:57:09.137Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/66/9a06c2227fedfd4919f0eaaa8b94377d9730882a7e4f95823c9a331ab5e1/tzdata-2026.6-py2.py3-none-any.whl", hash = "sha256:0a10eec6e13ef16b627fabed9a5f2ba61a62b1c67f327305f4e7e412a70b4aec", size = 348210, upload-time = "2026-10-28T09:57:07.276Z" },
 ]
 
 [[package]]

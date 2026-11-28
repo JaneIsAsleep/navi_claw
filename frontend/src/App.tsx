@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { ArrowUp, BookOpen, Check, ChevronRight, ChevronLeft, Heart, Users, Wallet, Briefcase, Palette, Zap, Copy, Download, FileText, Flag, Lightbulb, Menu, MessageCircle, MoreHorizontal, Plus, Radio, Search, Settings, Square, X } from 'lucide-react'
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import { ArrowUp, BookOpen, Check, ChevronRight, ChevronLeft, GraduationCap, Heart, Users, Wallet, Briefcase, Palette, Zap, Copy, Download, FileText, Flag, Lightbulb, Menu, MessageCircle, MoreHorizontal, Plus, Radio, Search, Settings, Square, X } from 'lucide-react'
 import { api, browserTimezone, labels, localDate, terminal, time, type Action, type CheckItem, type Config, type FeedImage, type GoalSetup, type GoalCard, type Detail, type Editor, type Item, type Job, type Message, type Reference, type Schedule, type Session, type State, type Tab } from './data'
 import type { EndpointProfile, EndpointUrls, Protocol } from './data'
 import { nativeSearchLabels, searchProviders, type SearchProvider } from './data'
@@ -12,11 +12,12 @@ import { FeedPanel } from './FeedPanel'
 import { GoalChoices } from './GoalChoices'
 import { ActionCard } from './ActionCard'
 import { AssistantDetails } from './AssistantDetails'
+import { CampusPanel } from './CampusPanel'
 import { Markdown } from './Markdown'
 import s from './App.module.css'
 import naviMark from './navi-mark.svg'
 
-const nav = [{ key: 'chat', label: '对话', icon: MessageCircle }, { key: 'search', label: '搜索', icon: Search }, { key: 'feed', label: '动态消息', icon: Radio }, { key: 'idea', label: '构想', icon: Lightbulb }, { key: 'goal', label: '目标', icon: Flag }, { key: 'artifact', label: '成果库', icon: FileText }] as const
+const nav = [{ key: 'chat', label: '对话', icon: MessageCircle }, { key: 'campus', label: '校园', icon: GraduationCap }, { key: 'search', label: '搜索', icon: Search }, { key: 'feed', label: '动态消息', icon: Radio }, { key: 'idea', label: '构想', icon: Lightbulb }, { key: 'goal', label: '目标', icon: Flag }, { key: 'artifact', label: '成果库', icon: FileText }] as const
 type Page = typeof nav[number]['key'] | 'settings'
 const pageFromHash = (): Page => nav.some(row => row.key === location.hash.slice(1)) || location.hash === '#settings' ? location.hash.slice(1) as Page : 'chat'
 const initialId = localStorage.getItem('navi-draft-active') === 'true' ? '' : localStorage.getItem('navi-session') || ''
@@ -113,6 +114,23 @@ export default function App() {
   const pending = state?.actions.filter(row => row.status === 'pending').length || 0
   const modalOpen = Boolean(editor || deletion || audit)
   const overlayOpen = modalOpen || searchOpen || !!idea || sourcesOpen || completedOpen || !!goalCategory || !!feedImage || !!endpointToDelete || !!mainReset
+
+  function resizeInput(element: HTMLTextAreaElement | null = inputRef.current) {
+    if (!element) return
+    element.style.height = '0px'
+    const styles = getComputedStyle(element)
+    const minimum = parseFloat(styles.minHeight) || 0
+    const maximum = Math.min(170, window.innerHeight * 0.32)
+    element.style.height = `${Math.min(Math.max(element.scrollHeight, minimum), maximum)}px`
+    element.style.overflowY = element.scrollHeight > maximum ? 'auto' : 'hidden'
+  }
+
+  useLayoutEffect(() => {
+    const update = () => resizeInput()
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [input, sessionId, page, paired])
 
   function saveDraft(text: string, refs = references, kind = composerKind) {
     setInput(text); setReferences(refs); setComposerKind(kind)
@@ -459,7 +477,7 @@ export default function App() {
   const sessionActions = state?.actions.filter(row => row.source_session_id === sessionId && row.acknowledged_at == null) || []
 
   const contentHeader = <>
-          <div className={s.pageIntro}><div className={s.pageHeading}><h1>{title}</h1>{['feed','goal'].includes(page) && <div className={s.pageOptions}><button className={s.iconButton} aria-label={page === 'feed' ? '动态选项' : '目标选项'} aria-expanded={pageMenu} onClick={() => setPageMenu(!pageMenu)}><MoreHorizontal size={22} /></button>{pageMenu && <div className={s.optionsMenu}>{page === 'goal' ? <button onClick={() => { capture(); setPageMenu(false); setCompletedOpen(true) }}>查看已完成目标</button> : <><button onClick={() => { setPageMenu(false); edit('brief') }}>关注说明</button><button onClick={() => { capture(); setPageMenu(false); setSourcesOpen(true) }}>管理来源</button></>}</div>}</div>}</div><p>{({ search: '对话标题搜索，包含匹配的封存话题。', feed: '关注内容。按本地生成或收录顺序安静更新。', idea: '看看今天能帮你做点什么。这里的建议会参考你正在做的事和订阅的内容。', goal: '方向、下一步和真实推进记录。', artifact: '查看和下载已经保存的成果。', settings: '连接模型，掌握授权和本机运行边界。' } as Record<string, string>)[page]}</p></div>
+          <div className={s.pageIntro}><div className={s.pageHeading}><h1>{title}</h1>{['feed','goal'].includes(page) && <div className={s.pageOptions}><button className={s.iconButton} aria-label={page === 'feed' ? '动态选项' : '目标选项'} aria-expanded={pageMenu} onClick={() => setPageMenu(!pageMenu)}><MoreHorizontal size={22} /></button>{pageMenu && <div className={s.optionsMenu}>{page === 'goal' ? <button onClick={() => { capture(); setPageMenu(false); setCompletedOpen(true) }}>查看已完成目标</button> : <><button onClick={() => { setPageMenu(false); edit('brief') }}>关注说明</button><button onClick={() => { capture(); setSourcesOpen(true); setPageMenu(false) }}>管理来源</button></>}</div>}</div>}</div><p>{({ campus: '整理 Blackboard 的近期消息和临近截止事项。', search: '对话标题搜索，包含匹配的封存话题。', feed: '关注内容。按本地生成或收录顺序安静更新。', idea: '看看今天能帮你做点什么。这里的建议会参考你正在做的事和订阅的内容。', goal: '方向、下一步和真实推进记录。', artifact: '查看和下载已经保存的成果。', settings: '连接模型，掌握授权和本机运行边界。' } as Record<string, string>)[page]}</p></div>
           {['feed','idea'].includes(page) && <><p className={s.subtle}>每日 06:00 更新，需本机运行。休眠或停机时，清醒后补更新，只补最近一次。</p>{page === 'feed' && !state?.feed_brief && <p className={s.subtle}>请在动态选项中设置关注说明。</p>}{page === "feed" && state?.records.some(row => row.id.startsWith("source-") && row.payload.enabled !== false && row.payload.last_error) && <button className={s.textButton} onClick={() => { capture(); setSourcesOpen(true) }}>来源读取失败，查看来源状态</button>}{(() => { const content = state?.auto_content?.[page === 'feed' ? 'feed' : 'ideas']; const latest = content?.latest; return <>{content?.last_success && <p className={s.subtle}>最近成功更新 {time(content.last_success)}</p>}{latest?.error && <p role="status" className={s.failureText}>{latest.error} · {latest.status === 'pending' ? '下次重试 ' + time(latest.next_run) + '，需持续清醒' : latest.status === 'running' ? '正在重试' : '已停止重试，等待下次日更'}</p>}</> })()}</>}
   </>
   const chatPanel = <ChatPanel avatar={avatar()} controls={<><button className={s.mobileMenu + ' ' + s.iconButton} aria-label="打开导航" onClick={() => setNavOpen(true)}><Menu size={22} /></button>{!paired && <button className={s.mobileSessions + ' ' + s.iconButton} aria-label="打开会话列表" onClick={() => setSessionOpen(!sessionOpen)}><MessageCircle size={21} /></button>}</>} split={paired} returnLabel={expandedFrom === 'feed' ? '返回并排动态' : '返回并排目标'} toggle={paired || expandedFrom || goalSession === sessionId && goalSession ? toggleChatLayout : undefined}>
@@ -483,7 +501,7 @@ export default function App() {
         <div className={s.composerArea}>
           {feedReply?.session === sessionId && references.some(ref => ref.id === feedReply.id) && <p className={s.feedReply}>正在回复 Navi · {feedReply.title}</p>}
           {references.length > 0 && <div className={s.references}>{references.map(ref => <div className={s.reference} key={ref.id}><details><summary>引用：{ref.title}</summary><p>{ref.body}</p>{ref.source_url && <a href={ref.source_url} target="_blank" rel="noreferrer">原始来源</a>}</details><button className={s.iconButton} aria-label={'移除引用 ' + ref.title} onClick={() => saveDraft(input, references.filter(r => r.id !== ref.id))}><X size={16} /></button></div>)}</div>}
-          <form className={s.composer} onSubmit={event => { event.preventDefault(); void submit() }}><div className={s.rowActions}><button type="button" className={chatSearch ? s.secondary : s.textButton} aria-pressed={chatSearch} disabled={working || !connected || archived} onClick={toggleChatSearch}>联网搜索{chatSearch ? '已开启' : '已关闭'}</button>{chatSearch && <span className={s.subtle}>{savedConnection?.native_search_check === 'supported' ? '优先 DeepSeek 原生搜索' : searchProviders[savedConnection?.web_search_provider ?? 'bocha']}</span>}</div><textarea ref={inputRef} aria-label="消息内容" placeholder={archived ? '解封后继续话题' : '和 Navi 说点什么'} disabled={archived} rows={2} value={input} onChange={event => saveDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className={s.composerTools}><span className={s.subtle}>{input ? '草稿保存在本机' : 'Enter 发送 · Shift + Enter 换行'}</span>{busy ? <button type="button" className={s.send} aria-label="停止当前作业" onClick={() => actPath('/jobs/' + busy.id + '/cancel', 'POST', {})}><Square size={16} fill="currentColor" /></button> : <button type="submit" className={s.send} aria-label="发送消息" disabled={!input.trim() || working || !connected || archived}><ArrowUp size={20} /></button>}</div></form>
+          <form className={s.composer} onSubmit={event => { event.preventDefault(); void submit() }}><div className={s.rowActions}><button type="button" className={chatSearch ? s.secondary : s.textButton} aria-pressed={chatSearch} disabled={working || !connected || archived} onClick={toggleChatSearch}>联网搜索{chatSearch ? '已开启' : '已关闭'}</button>{chatSearch && <span className={s.subtle}>{savedConnection?.native_search_check === 'supported' ? '优先 DeepSeek 原生搜索' : searchProviders[savedConnection?.web_search_provider ?? 'bocha']}</span>}</div><textarea ref={inputRef} aria-label="消息内容" placeholder={archived ? '解封后继续话题' : '和 Navi 说点什么'} disabled={archived} rows={2} value={input} onChange={event => { resizeInput(event.currentTarget); saveDraft(event.target.value) }} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} /><div className={s.composerTools}><span className={s.subtle}>{input ? '草稿保存在本机' : 'Enter 发送 · Shift + Enter 换行'}</span>{busy ? <button type="button" className={s.send} aria-label="停止当前作业" onClick={() => actPath('/jobs/' + busy.id + '/cancel', 'POST', {})}><Square size={16} fill="currentColor" /></button> : <button type="submit" className={s.send} aria-label="发送消息" disabled={!input.trim() || working || !connected || archived}><ArrowUp size={20} /></button>}</div></form>
         </div>
 </ChatPanel>
   return <div className={s.app} onClickCapture={event => { const target = (event.target as Element).closest<HTMLElement>('button, a'); if (target) interaction.current = target }}>
@@ -523,6 +541,7 @@ export default function App() {
           {detail.kind === 'goal' && <><h2>下一步</h2><p>{detail.payload.next_step || '待明确'}</p><div className={s.rowActions}><button className={s.secondary} onClick={() => edit('goal', detail)}>编辑目标</button><button className={s.textButton} onClick={() => actPath('/records/' + detail.id, 'PUT', { ...detail.payload, state: detail.payload.state === 'paused' ? 'active' : 'paused' }, '目标状态已更新，提醒排程保持原有安排。')}>{detail.payload.state === 'paused' ? '恢复' : '暂停'}</button><button className={s.textButton} onClick={() => actPath('/records/' + detail.id, 'PUT', { ...detail.payload, state: 'completed' }, '目标及关联追踪已结束。')}>完成目标</button></div><h2>实际关联任务</h2>{detail.schedules.map(row => <p key={row.id}>{row.title} · {labels[row.state]}</p>)}{!detail.schedules.length && <p className={s.subtle}>暂无关联任务。</p>}<h2>相关成果</h2>{detail.artifacts.map(row => <button className={s.textButton} key={row.id} onClick={() => void openRecord(row)}>{row.payload.title}</button>)}{!detail.artifacts.length && <p className={s.subtle}>暂无关联成果。</p>}<h2>活动时间轴</h2>{detail.timeline.filter(row => eventLabels[row.kind]).map(row => <p key={row.id}>{time(row.created)} · {eventLabels[row.kind]}{row.data.next_step ? '：' + String(row.data.next_step) : ''}</p>)}</>}
         </> : <>
           {contentHeader}
+          {page === 'campus' && <CampusPanel />}
           {page === 'goal' && <>
             {!!(trackingSchedules.length || trackingJobs.length) && <><h2>追踪</h2>{trackingSchedules.map(row => <div className={s.goalRow} key={row.id}><input type="checkbox" aria-label={'完成追踪 ' + row.title} disabled={working} checked={false} onChange={() => actPath('/schedules/' + row.id,'PATCH',{operation:'complete'},'追踪已结束')} /><span>{row.title}{row.state === 'paused' && <small> · 已暂停</small>}</span></div>)}{trackingJobs.map(row => <div className={s.goalRow} key={row.id}><input type="checkbox" aria-label={'结束工作 ' + row.input.slice(0,40)} disabled={working} checked={false} onChange={() => actPath('/jobs/' + row.id + '/cancel','POST',{},'工作已取消')} /><span>{row.input.slice(0,60)}</span></div>)}</>}
             {!!records.length && <><h2>目标</h2>{records.map(row => <div className={s.goalRow + (completedRows[row.id] ? ' ' + s.goalCompleted : '')} key={row.id} data-goal-id={row.id}><input type="checkbox" checked={Boolean(completedRows[row.id])} disabled={working || Boolean(completedRows[row.id])} aria-label={'完成目标 ' + row.payload.title} onChange={() => void completeGoal(row)} /><button className={s.goalAbstract} onClick={() => void openRecord(row)}>{String(row.payload.abstract || row.payload.title).slice(0,60)}{row.payload.state === 'paused' && <small> · 已暂停</small>}</button></div>)}</>}

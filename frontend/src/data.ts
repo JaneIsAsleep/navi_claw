@@ -10,6 +10,15 @@ export type CheckItem = { id: string; title: string; body?: string; priority: nu
 export type Protocol = 'messages' | 'chat_completions'
 export type EndpointUrls = Record<Protocol, string>
 export type EndpointProfile = { id: string; urls: EndpointUrls }
+export type CampusServiceInfo = { id: 'tis' | 'bb'; name: string }
+export type CampusStatus = { logged_in: boolean; services: CampusServiceInfo[] }
+export type CampusBrowserLogin = { status: 'idle' | 'waiting' | 'succeeded' | 'failed'; phase?: string; error: string; latest_access?: string }
+export type CampusLink = { title: string; url: string }
+export type CampusPage = { id?: 'tis' | 'bb'; service?: 'tis' | 'bb'; name?: string; title: string; url: string; text: string; text_length?: number; truncated?: boolean; links: CampusLink[] }
+export type CampusOverview = { logged_in: boolean; fetched_at: number; services: CampusPage[]; errors?: { service: 'tis' | 'bb'; error: string }[] }
+export type CampusDashboardItem = { id: string; title: string; course: string; published_at: number; published_label: string; summary: string; kind: 'notice' | 'assignment' | 'exam' | 'deadline'; url: string; attachments: CampusLink[] }
+export type CampusDeadline = { id: string; title: string; course: string; kind: 'notice' | 'assignment' | 'exam' | 'deadline'; due_at: number; due_label: string; url: string; source: string; summary?: string }
+export type CampusDashboard = { logged_in: boolean; generated_at: number; cached?: boolean; stale?: boolean; cached_at?: number; cache_expires_at?: number; refresh_scheduled?: boolean; refresh_error?: string; model_generated?: boolean; brief?: string; summary: { courses: number; messages: number; deadlines: number }; recent_messages: CampusDashboardItem[]; deadlines: CampusDeadline[] }
 export const searchProviders = { bocha: '博查 Bocha', brave: 'Brave Search', anysearch: 'AnySearch' }
 export type SearchProvider = keyof typeof searchProviders
 export const nativeSearchLabels = {
@@ -41,7 +50,14 @@ export class APIError extends Error {
 }
 export async function api<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch('/api' + path, { method, headers: { 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
-  const value = await response.json()
-  if (!response.ok) throw new APIError(value.detail || '请求失败，请稍后重试', response.status)
-  return value
+  const text = await response.text()
+  let value: { detail?: string } | T | null = null
+  try {
+    value = text ? JSON.parse(text) : null
+  } catch {
+    if (!response.ok) throw new APIError(text.trim().slice(0, 300) || `请求失败（HTTP ${response.status}）`, response.status)
+    throw new APIError(`服务器返回格式无效（HTTP ${response.status}）`, 502)
+  }
+  if (!response.ok) throw new APIError((value as { detail?: string } | null)?.detail || `请求失败（HTTP ${response.status}）`, response.status)
+  return value as T
 }

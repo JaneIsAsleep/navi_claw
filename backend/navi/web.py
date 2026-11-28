@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from .gateway import TERMINAL, APIError
 from .feed_http import FeedReadError
 from .storage import packed
+from .campus import CampusError
 
 
 async def body(request, object_only=True):
@@ -23,7 +24,7 @@ async def body(request, object_only=True):
     return value
 
 
-def create_app(gateway, instance="test", project_id="test", shutdown_token=None):
+def create_app(gateway, instance="test", project_id="test", shutdown_token=None, request_shutdown=None):
     @asynccontextmanager
     async def lifespan(app):
         await gateway.start()
@@ -62,7 +63,10 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
     async def shutdown(request: Request):
         if not shutdown_token or request.headers.get("X-Navi-Owner") != shutdown_token:
             return JSONResponse({"detail": "需要本项目停止入口"}, 403)
-        asyncio.get_running_loop().call_later(0.2, os.kill, os.getpid(), signal.SIGTERM)
+        if request_shutdown is not None:
+            asyncio.get_running_loop().call_later(0.2, request_shutdown)
+        else:
+            asyncio.get_running_loop().call_later(0.2, os.kill, os.getpid(), signal.SIGTERM)
         return {"stopping": True}
 
     @app.get("/api/state")
@@ -282,6 +286,67 @@ def create_app(gateway, instance="test", project_id="test", shutdown_token=None)
         with gateway.db.transaction() as conn:
             identity = gateway.insert_job(conn, kind="connection", text="请简短回复，确认真实 API 已返回结果。")
         return gateway.require("jobs", identity)
+
+    @app.get("/api/campus/status")
+    def campus_status():
+        return gateway.campus.status()
+
+    @app.post("/api/campus/login")
+    async def campus_login(request: Request):
+        values = await body(request)
+        if set(values) != {"username", "password"}:
+            raise ValueError("CAS 登录只接受用户名和密码")
+        try:
+            result = await gateway.campus.login(values["username"], values["password"])
+            gateway.clear_campus_dashboard_cache()
+            return result
+        except CampusError as error:
+            raise APIError(str(error), 401) from error
+
+    @app.post("/api/campus/browser-login")
+    async def campus_browser_login():
+        gateway.clear_campus_dashboard_cache()
+        return gateway.campus.start_browser_login()
+
+    @app.get("/api/campus/browser-login/status")
+    def campus_browser_login_status():
+        return gateway.campus.browser_login_status()
+
+    @app.post("/api/campus/logout")
+    async def campus_logout():
+        result = await gateway.campus.logout()
+        gateway.clear_campus_dashboard_cache()
+        return result
+
+    @app.get("/api/campus/overview")
+    async def campus_overview(service: str = "bb", refresh: bool = False):
+        try:
+            return await gateway.campus.overview(service, refresh)
+        except CampusError as error:
+            raise APIError(str(error), 401) from error
+
+    @app.get("/api/campus/dashboard")
+    async def campus_dashboard(refresh: bool = False):
+        try:
+            return await gateway.campus_dashboard(refresh)
+        except CampusError as error:
+            raise APIError(str(error), 401) from error
+
+    @app.post("/api/campus/page")
+    async def campus_page(request: Request):
+        values = await body(request)
+        if not {"service", "url"} <= set(values) or set(values) - {"service", "url", "refresh"}:
+            raise ValueError("校园页面请求字段无效")
+        if type(values.get("refresh", False)) is not bool:
+            raise ValueError("校园页面刷新字段无效")
+        try:
+            return await gateway.campus.read_page(
+                values["service"],
+                values["url"],
+                refresh=values.get("refresh", False),
+            )
+        except CampusError as error:
+            raise APIError(str(error), 401) from error
 
     @app.post("/api/settings/check-native-search")
     async def check_native_search():

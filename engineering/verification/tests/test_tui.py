@@ -65,12 +65,41 @@ async def test_terminal_approval_requires_confirmation_and_exact_hash(tmp_path):
         assert await pilot.click("#approve")
         assert isinstance(app.screen, Decision)
         await pilot.press("escape")
+        await ready(pilot, lambda: not isinstance(app.screen, Decision))
         assert gateway.require("actions", action["id"])["status"] == "pending"
         assert await pilot.click("#approve")
+        await ready(pilot, lambda: isinstance(app.screen, Decision))
         assert await pilot.click("#confirm")
         await ready(pilot, lambda: gateway.require("actions", action["id"])["status"] == "approved")
         gateway.deliver()
         assert next((tmp_path / "exports").glob("*brief.md")).read_text() == action["body"]
+
+
+async def test_terminal_campus_page_renders_dashboard(tmp_path, monkeypatch):
+    gateway = Gateway(ROOT, tmp_path, Model(), Clock())
+
+    async def dashboard(refresh=False):
+        return {
+            "brief": "模型生成的总览",
+            "summary": {"courses": 1, "messages": 1, "deadlines": 1},
+            "recent_messages": [{
+                "id": "m1", "title": "近期课程消息", "course": "Compilers",
+                "published_label": "11月22日 10:00", "summary": "阅读课程通知。",
+            }],
+            "deadlines": [{
+                "id": "d1", "title": "Project 5", "course": "Compilers",
+                "due_label": "12月13日 23:59", "source": "Blackboard 公告", "summary": "提交项目。",
+            }],
+        }
+
+    monkeypatch.setattr(gateway, "campus_dashboard", dashboard)
+    app = NaviTerminal(transport=httpx.ASGITransport(app=create_app(gateway)))
+    async with app.run_test(size=(105, 31)) as pilot:
+        await ready(pilot, lambda: app.online)
+        app.show_page("campus")
+        await ready(pilot, lambda: app.query_one("#items", OptionList).option_count == 2)
+        assert app.page == "campus"
+        assert app.query_one("#items", OptionList).option_count == 2
 
 
 def test_terminal_text_removes_control_sequences_and_preserves_chinese():

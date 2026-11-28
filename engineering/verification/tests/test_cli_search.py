@@ -84,3 +84,21 @@ def test_cli_refuses_search_key_input_that_would_echo(monkeypatch):
     monkeypatch.setattr(cli.getpass, "getpass", echo_warning)
     with pytest.raises(ValueError, match="支持隐藏输入"):
         cli.read_search_key()
+
+
+def test_cli_campus_dashboard_uses_shared_api(cli_web, monkeypatch):
+    run, _, gateway = cli_web
+
+    async def dashboard(refresh=False):
+        assert refresh is True
+        return {
+            "brief": "校园总览",
+            "summary": {"courses": 1, "messages": 1, "deadlines": 1},
+            "recent_messages": [{"id": "m1", "title": "近期消息"}],
+            "deadlines": [{"id": "d1", "title": "截止事项"}],
+        }
+
+    monkeypatch.setattr(gateway, "campus_dashboard", dashboard)
+    result = run("campus", "--refresh")
+    assert result["brief"] == "校园总览"
+    assert result["deadlines"][0]["title"] == "截止事项"

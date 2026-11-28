@@ -1,6 +1,6 @@
 # Navi 使用说明
 
-本机入口为 [Navi](http://127.0.0.1:8766)。DeepSeek 密钥留在本机，最近实际验证的模型为 `deepseek-flash`，使用 Messages 协议。检查当前服务使用 `status.command`。
+本机入口为 [Navi](http://127.0.0.1:8766)。DeepSeek 密钥留在本机，最近实际验证的模型为 `deepseek-flash`，使用 Messages 协议。检查当前服务使用对应平台的 `status.command` 或 `status-windows.cmd`。
 
 在网页聊天输入框上方开启「联网搜索」。开关按对话保存，默认关闭。「设置 → DeepSeek 连接 → 测试原生搜索」会用当前模型、Endpoint、协议和密钥发一次真实请求，收到成功的服务端搜索回执才算通过。更换连接配置后，显示该配置的测试状态。通过后，普通问答直接启用 DeepSeek 原生搜索；同一轮需要本地工具时，Navi 单独执行原生搜索，再处理本地任务。未验证通过时使用所选第三方服务；原生搜索实际失败时也可回退。原生搜索返回零结果或未执行搜索时不回退。接口依据 [DeepSeek Web Tools](https://api-docs.deepseek.com/guides/web_tools/)。
 
@@ -8,9 +8,11 @@
 
 网页「设置 → DeepSeek 连接」默认使用官方地址，Messages 为 `https://api.deepseek.com/anthropic/v1/messages`，Chat Completions 为 `https://api.deepseek.com/chat/completions`。在 Endpoint 下拉菜单选「添加 Endpoint…」，按服务商文档填写两条完整 URL。Messages 常见路径是 `/v1/messages`，Chat Completions 常见路径是 `/v1/chat/completions`。Navi 按所选协议直接使用对应 URL，不追加路径。每组两条 URL 共用一个本机密钥，各组密钥独立。选中已保存的配置并保存即可切换，也可复制后修改或确认删除。删除时一并移除该组密钥，删除当前配置会切回官方连接。旧前缀会在启动时迁移成一组按旧规则生成的 URL，迁移后请按服务商文档核对，再用「真实连接检查」验证所选协议。自定义服务会收到模型请求中的相关对话上下文，请仅填写可信地址。
 
-项目根目录为本机克隆的 `navi_claw` 文件夹。Windows/WSL2 的首次安装见 [README](../README.md)。
+校园页通过南科大 CAS 登录校园平台。点击“使用独立浏览器登录”后，Navi 打开唯一一个独立 Edge 窗口，在真实 CAS 页面完成账号密码和滑块验证。TIS 与 Blackboard 的后续跳转都在同一个窗口中完成，不创建额外窗口。登录成功后窗口最小化并保留本次校园会话；退出 CAS 或停止 Navi 时窗口关闭。系统 Edge 与 Navi 的浏览器会话相互隔离，系统 Edge 已登录不会自动共享给 Navi。密码只用于本次登录，不保存；本机仅保存加密会话。Blackboard 看板只保留近期消息和临近 DDL，作业与考试统一归入 DDL；已过期和重复事项会被过滤，并由当前模型整理摘要。看板缓存一小时，过期后先显示旧内容并在后台更新；页面可见时每五分钟检查一次，手动刷新会强制更新。只有已验证的真实 Blackboard 地址会显示外部入口。聊天中使用校园内容时，相关结构化信息会发送给当前模型服务；Cookie 和密码不会发送给模型。会话过期后需要重新登录。
 
-macOS 双击项目根目录的 `start.command` 启动，Windows/WSL2 在 Ubuntu 终端执行 `./start.command`。看到“已就绪”后可以关闭启动终端，WSL 环境仍须保持运行。关闭浏览器也不会停止后台。普通提醒实际投递到创建对话，封存期间转主对话并标明来源。真正关闭使用同目录的 `stop.command`；`status.command` 可查看状态、入口和日志位置。不要直接打开 `frontend/index.html`。
+项目根目录为本机克隆的 `navi_claw` 文件夹。Windows 双击 `start-windows.cmd` 启动，首次运行会自动检查并准备环境；停止与状态分别双击 `stop-windows.cmd`、`status-windows.cmd`，也可用 `setup-windows.cmd` 手动修复环境。完整首次安装说明见 [README](../README.md)。
+
+macOS 双击项目根目录的 `start.command`，Windows/WSL2 仍可在 Ubuntu 终端执行 `./start.command`。看到“已就绪”后可以关闭启动终端，WSL 环境仍须保持运行。关闭浏览器也不会停止后台。普通提醒实际投递到创建对话，封存期间转主对话并标明来源。真正关闭使用当前平台对应的停止入口；状态入口可查看状态、入口和日志位置。不要直接打开 `frontend/index.html`。
 
 如果使用 `./run` 前台启动，需要保留该终端，按 `Ctrl+C` 停止。请先停止后台，再使用这个入口。电脑休眠、关机或后台停止期间不执行任务；恢复后，每个调度最多补做一次最近错过的检查。
 

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from pathlib import Path
 
 import httpx
@@ -294,7 +295,10 @@ async def test_budget_stops_new_call_and_does_not_fabricate_success(g):
 
 def test_keys_are_private_and_absent_from_public_state_and_evidence(g):
     g.settings.update({"api_key": "test-only-secret"})
-    assert g.settings.key_path.stat().st_mode & 0o777 == 0o600
+    if os.name == "posix":
+        assert g.settings.key_path.stat().st_mode & 0o777 == 0o600
+    else:
+        assert g.settings.key_path.is_file()
     assert "test-only-secret" not in packed(g.snapshot())
     assert "test-only-secret" not in packed(g.audit())
     assert "test-only-secret" not in g.db.path.read_bytes().decode(errors="ignore")

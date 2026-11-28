@@ -22,6 +22,7 @@ from .web_search import SEARCH_PROVIDERS
 
 PAGES = {
     "chat": ("对话", "打开会话与消息"),
+    "campus": ("校园", "查看 Blackboard 总览与 DDL"),
     "goals": ("目标", "查看目标与下一步"),
     "reminders": ("提醒", "查看提醒排程与投递"),
     "feed": ("动态", "浏览关注内容与来源"),
@@ -170,6 +171,7 @@ class NaviTerminal(App):
         self.feed = []
         self.feed_cursor = None
         self.feed_paged = False
+        self.campus_dashboard = {}
         self.session_options = None
         self.item_options = None
 
@@ -277,7 +279,7 @@ class NaviTerminal(App):
             self.query_one("#composer", TextArea).focus()
         elif page != "settings":
             self.query_one("#items", OptionList).focus()
-        if page == "feed":
+        if page in {"feed", "campus"}:
             self.action_refresh_data()
 
     def sync_layout(self):
@@ -308,6 +310,8 @@ class NaviTerminal(App):
                 self.feed = feed["items"]
                 if not self.feed_paged:
                     self.feed_cursor = feed["next_cursor"]
+            elif self.page == "campus":
+                self.campus_dashboard = await self.api.call("GET", "/campus/dashboard?refresh=false")
             if self.session is None:
                 self.session = state["main_session_id"]
             self.render_sidebar()
@@ -552,6 +556,21 @@ class NaviTerminal(App):
         if self.page == "feed":
             rows = [*self.feed, *self.feed_extra]
             return list({row["id"]: row for row in rows}.values())
+        if self.page == "campus":
+            rows = []
+            for item in self.campus_dashboard.get("recent_messages", []):
+                rows.append({
+                    "id": f"message:{item['id']}",
+                    "campus_meta": f"{item.get('course') or 'Blackboard'} · {item.get('published_label', '')}",
+                    "payload": {"title": item.get("title", ""), "body": item.get("summary", "")},
+                })
+            for item in self.campus_dashboard.get("deadlines", []):
+                rows.append({
+                    "id": f"deadline:{item['id']}",
+                    "campus_meta": f"{item.get('course') or item.get('source') or 'Blackboard'} · {item.get('due_label', '')}",
+                    "payload": {"title": item.get("title", ""), "body": item.get("summary", "")},
+                })
+            return rows
         collection = {"reminders": "schedules", "approvals": "actions", "activity": "jobs"}.get(self.page)
         if collection:
             rows = self.state.get(collection, [])
@@ -605,6 +624,8 @@ class NaviTerminal(App):
                 detail = f"{row['title']}\n{kind}  ·  {status(row['state'])}\n下次触发  {timestamp(row['next_due']) if row['state'] == 'active' else '暂无'}\n\n{row['instruction']}"
             elif self.page == "activity":
                 detail = f"{status(row['status'])}  ·  {timestamp(row['updated'])}\n\n{row['input']}\n\n{row.get('error') or row.get('result') or ''}"
+            elif self.page == "campus":
+                detail = f"{payload.get('title', '')}\n{row.get('campus_meta', '')}\n\n{payload.get('body') or ''}"
             else:
                 detail = f"{payload.get('title', '')}\n{timestamp(row['created'])}\n\n{payload.get('body') or payload.get('abstract') or ''}"
                 if payload.get("next_step"):
@@ -613,6 +634,8 @@ class NaviTerminal(App):
                     detail += f"\n\n已导出  data/exports/{payload['filename']}"
                 if payload.get("sources"):
                     detail += "\n\n来源\n" + "\n".join(f"{item.get('title', '')}  {item.get('url', '')}" for item in payload["sources"])
+        if not detail and self.page == "campus":
+            detail = text(self.campus_dashboard.get("brief", "尚未读取校园看板。"))
         self.query_one("#detail", Static).update(text(detail) or "此处会显示选中条目的内容。")
         pending = bool(row and self.page == "approvals" and row["status"] == "pending")
         acknowledge = bool(row and self.page == "approvals" and row["kind"] == "notification"

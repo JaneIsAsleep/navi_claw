@@ -50,6 +50,8 @@ def main():
     sub.add_parser("tui", help="打开全屏终端界面")
     sub.add_parser("status")
     sub.add_parser("sessions")
+    p = sub.add_parser("campus", help="查看 Blackboard 校园看板")
+    p.add_argument("--refresh", action="store_true", help="跳过缓存，重新读取并整理")
     p = sub.add_parser("search-sessions")
     p.add_argument("title")
     for name in ("rename-session", "archive-session", "unarchive-session", "delete-session", "deletion-impact"):
@@ -166,6 +168,8 @@ def main():
                 result = adapter.wait(result["id"])
         elif name == "messages":
             result = adapter.call("GET", f"/sessions/{args.session}/messages")
+        elif name == "campus":
+            result = adapter.call("GET", f"/campus/dashboard?refresh={'true' if args.refresh else 'false'}")
         elif name == "schedule":
             result = adapter.call("POST", "/schedules", {"title": args.title, "instruction": args.instruction, "kind": args.kind, "interval_seconds": args.interval, "next_due": time.time() + args.delay, "session_id": args.session})
         elif name in {"pause", "resume", "cancel-schedule"}:

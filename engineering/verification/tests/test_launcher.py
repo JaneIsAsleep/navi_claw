@@ -35,12 +35,10 @@ def test_stop_waits_for_owned_process_after_http_disconnect(tmp_path, monkeypatc
     monkeypatch.setattr(launcher, "health", lambda: next(states, None))
     monkeypatch.setattr(launcher.time, "sleep", lambda seconds: None)
     calls = []
-    def alive(pid, signal):
-        assert pid == 1234 and signal == 0
+    def alive(pid):
         calls.append(pid)
-        if len(calls) == 3:
-            raise ProcessLookupError
-    monkeypatch.setattr(launcher.os, "kill", alive)
+        return len(calls) < 3
+    monkeypatch.setattr(launcher, "process_alive", alive)
     class Response:
         def __enter__(self): return self
         def __exit__(self, *args): pass

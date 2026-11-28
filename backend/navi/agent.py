@@ -6,6 +6,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from .item_edits import ITEM_EDIT, KINDS, PAGE_SIZE, STATES, name_key, search_edit_targets, validate_changes
+from .campus import CampusError, TOOL_TEXT_LIMIT
 from .model import AgentError
 from .reminder_time import CLOCK, DATE, RELATIVE, finite_number, has_time_reply, number, reminder_timing
 from .storage import packed, uid
@@ -43,6 +44,9 @@ OBJECT_ID = {"type": "string", "pattern": "^[0-9a-f]{32}$"}
 EDIT_TOOLS = {'find_edit_targets', 'propose_item_edit', 'choose_edit_target', 'update_goal', 'cancel_goal', 'cancel_tracking'}
 TOOLS = [
     tool("check_updates", "调用当前简报 Skill，检查本机关注事项与已订阅的英文官方 RSS，返回真实条目、来源、发布时间和检查时间。", {}, []),
+    tool("get_campus_overview", "读取用户已登录的南科大校园平台首页。默认读取 Blackboard；只有用户明确要求教学管理与服务平台时才传入 service=tis。返回页面标题、可见文本和站内链接。仅在用户询问课表、课程或校园平台消息时调用。会话未登录或过期时如实说明。", {"service": {"type": "string", "enum": ["bb", "tis"]}}, []),
+    tool("get_campus_dashboard", "读取 Blackboard 结构化校园看板，包含近期消息和临近 DDL，作业与考试统一归入 DDL。用户询问最近通知、截止时间、作业或考试时优先调用。", {}, []),
+    tool("read_campus_page", "读取用户已登录校园平台中的一个南科大站内链接，用于查看课程、课表或消息详情。只允许 tis.sustech.edu.cn 和 bb.sustech.edu.cn。", {"service": {"type": "string", "enum": ["tis", "bb"]}, "url": {"type": "string", "maxLength": 2048}}, ["service", "url"]),
     tool("web_search", "搜索公开网页，适用于时效性事实或用户要求查证时。使用当前搜索服务适合的简短关键词，只包含所需的公开信息，不发送个人信息、会话、记忆或密钥。每轮一次，返回摘要和来源链接，不代表已阅读全文。", {"query": {"type": "string", "maxLength": 250}}, ["query"]),
     tool("remember", "仅在用户明确要求记住时保存个人记忆。", {"title": TEXT, "body": TEXT}, ["title", "body"]),
     tool("create_goal", "用户明确要求创建目标时保存目标与下一步。", {"title": TEXT, "body": TEXT, "next_step": TEXT}, ["title", "body", "next_step"]),
@@ -1025,9 +1029,24 @@ class Agent:
             self.g.db.execute("INSERT INTO tool_calls VALUES(?,?,?,?,?,?)", (identity, job["id"], name, packed(arguments), packed(result), self.g.clock()))
             self.g.db.event("tool.reused", {"tool_call_id": identity, "previous_call_id": previous["id"], "name": name}, job["id"], self.g.clock())
             return result
-        status = '正在核对记录和修改提案' if name in EDIT_TOOLS else {"check_updates": "正在检查关注事项", "remember": "正在保存记忆", "create_goal": "正在保存目标", "search_conversations": "正在按标题找回话题", "unarchive_conversation": "正在解封话题", "schedule_task": "正在安排提醒", "propose_export": "正在准备待审批文档"}[name]
+        status = '正在核对记录和修改提案' if name in EDIT_TOOLS else {"check_updates": "正在检查关注事项", "get_campus_overview": "正在读取校园平台", "get_campus_dashboard": "正在整理校园看板", "read_campus_page": "正在读取校园页面", "remember": "正在保存记忆", "create_goal": "正在保存目标", "search_conversations": "正在按标题找回话题", "unarchive_conversation": "正在解封话题", "schedule_task": "正在安排提醒", "propose_export": "正在准备待审批文档"}[name]
         await self.g.emit(job["id"], "status", {"message": status})
-        if name == "check_updates":
+        if name == "get_campus_overview":
+            try:
+                result = await self.g.campus.overview(arguments.get("service", "bb"))
+            except CampusError as error:
+                raise ValueError(str(error)) from error
+        elif name == "get_campus_dashboard":
+            try:
+                result = await self.g.campus.dashboard()
+            except CampusError as error:
+                raise ValueError(str(error)) from error
+        elif name == "read_campus_page":
+            try:
+                result = await self.g.campus.read_page(arguments["service"], arguments["url"], TOOL_TEXT_LIMIT)
+            except CampusError as error:
+                raise ValueError(str(error)) from error
+        elif name == "check_updates":
             public = await self.g.feeds.refresh(job["id"])
             if job['kind'] == 'feed':
                 public['items'] = await self.g.feeds.enrich(public['items'])
@@ -1224,6 +1243,7 @@ class Agent:
             candidates = self.edit_targets(job, update[0])
             if len(candidates) == 1:
                 context['requested_goal'] = {key: candidates[0][key] for key in ('id', 'title')}
+        campus = self.g.campus.status()
         system = (
             "你是 Navi，本机个人 AI 助理。使用简洁、清楚的中文。保持辩证，明确来源、时间和不确定性。"
             "禁止编造联网检查、执行结果、任务或成果。不要使用破折号或对立式修辞。"
@@ -1245,6 +1265,7 @@ class Agent:
             f"\n当前有效状态：{packed(context)}。只将有效 memories 作为个人记忆使用。"
             f"\n会话摘要：{summary}\n本作业已加载 Skill：\n{config['skill_instructions']}"
             f"\n关注说明（只影响以后生成）：{config.get('feed_brief', '')}"
+            f"\n校园平台：{'已登录，可按用户要求读取课程与消息；询问近期消息、DDL、作业或考试时优先使用 get_campus_dashboard，作业和考试都在 DDL 中' if campus['logged_in'] else '未登录，用户需要先在校园页使用 CAS 登录'}。"
         )
         if checked:
             messages[-1]["content"] += "\n实际 Skill 检查结果：" + packed(checked)
@@ -1257,6 +1278,8 @@ class Agent:
         available_tools = [entry for entry in TOOLS if entry['name'] not in {'update_goal', 'cancel_goal', 'cancel_tracking', 'choose_edit_target'} - legacy_edit]
         if job['kind'] != 'chat':
             available_tools = [entry for entry in available_tools if entry['name'] not in EDIT_TOOLS]
+        if job['kind'] != 'chat':
+            available_tools = [entry for entry in available_tools if entry['name'] not in {'get_campus_overview', 'get_campus_dashboard', 'read_campus_page'}]
         if pending_edit:
             available_tools.append(next(entry for entry in TOOLS if entry['name'] == 'choose_edit_target'))
             system += '\n如果用户明确选择上一轮候选，调用 choose_edit_target。若仍含糊，请询问用户。上一轮候选：' + packed(pending_edit['candidates'])

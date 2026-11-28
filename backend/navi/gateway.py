@@ -11,6 +11,13 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from .config import Settings
+from .campus import CampusService
+from .campus_summary import (
+    SYSTEM_PROMPT as CAMPUS_SUMMARY_PROMPT,
+    merge_model_summaries,
+    model_payload,
+    parse_model_summary,
+)
 from .feeds import PublicFeeds
 from .item_edits import ITEM_EDIT, apply_item_edit, prepare_item_edit
 from .model import AgentError, DeepSeek
@@ -31,6 +38,8 @@ VISIBLE_MESSAGE = """NOT EXISTS (
 IDEA_ACTIONS = {"goal_breakdown", "source_summary", "document_draft", "next_step", "task_review"}
 CATEGORIES = {"health": "健康", "relationships": "人际关系", "finance": "财务", "career": "职涯", "interests": "兴趣", "productivity": "生产力", "other": "其他"}
 TRANSIENT_CONTENT_ERRORS = {'model_timeout', 'model_connection_error', 'model_transport_error', 'model_rate_limited', 'model_server_error', 'sleep_interrupted'}
+CAMPUS_DASHBOARD_CACHE_SECONDS = 3600
+CAMPUS_DASHBOARD_RETRY_SECONDS = 300
 
 
 class APIError(ValueError):
@@ -50,9 +59,15 @@ class Gateway:
         self.settings = Settings(self.db, directory)
         self.skills = BriefingSkills(root, directory)
         self.feeds = PublicFeeds(self)
+        self.campus = CampusService(self.directory)
         self.web_search = WebSearch()
         self.model = model or DeepSeek()
         self.listeners: dict[str, set[asyncio.Queue]] = {}
+        self.campus_dashboard_cache = None
+        self.campus_dashboard_lock = asyncio.Lock()
+        self.campus_dashboard_refresh_task = None
+        self.campus_dashboard_refresh_error = ""
+        self.campus_dashboard_last_attempt = 0.0
         self.running = False
         self.active: dict[str, asyncio.Task] = {}
         self.loops: list[asyncio.Task] = []
@@ -361,6 +376,120 @@ class Gateway:
         config = self.settings.current()
         config["skill_instructions"] = self.skills.description(config["workflow"])
         return config
+
+    async def campus_dashboard(self, refresh=False):
+        now = self.clock()
+        cache = self.campus_dashboard_cache
+        if not refresh and cache:
+            age = max(0, now - cache["created"])
+            stale = age > CAMPUS_DASHBOARD_CACHE_SECONDS
+            value = {
+                **cache["value"],
+                "cached": True,
+                "stale": stale,
+                "cached_at": cache["created"],
+                "cache_expires_at": cache["created"] + CAMPUS_DASHBOARD_CACHE_SECONDS,
+            }
+            if stale:
+                value["refresh_scheduled"] = self._schedule_campus_dashboard_refresh()
+            if self.campus_dashboard_refresh_error:
+                value["refresh_error"] = self.campus_dashboard_refresh_error
+            return value
+        return await self._build_campus_dashboard()
+
+    def _schedule_campus_dashboard_refresh(self):
+        task = self.campus_dashboard_refresh_task
+        if task is not None and not task.done():
+            return False
+        if self.clock() - self.campus_dashboard_last_attempt < CAMPUS_DASHBOARD_RETRY_SECONDS:
+            return False
+        self.campus_dashboard_last_attempt = self.clock()
+        self.campus_dashboard_refresh_task = asyncio.create_task(self._background_campus_refresh())
+        return True
+
+    async def _background_campus_refresh(self):
+        try:
+            await self._build_campus_dashboard()
+        except Exception as error:
+            self.campus_dashboard_refresh_error = str(error)[:240]
+
+    def clear_campus_dashboard_cache(self):
+        self.campus_dashboard_cache = None
+        self.campus_dashboard_refresh_error = ""
+        self.campus_dashboard_last_attempt = 0.0
+        task = self.campus_dashboard_refresh_task
+        self.campus_dashboard_refresh_task = None
+        if task is not None and not task.done():
+            task.cancel()
+
+    async def _build_campus_dashboard(self):
+        async with self.campus_dashboard_lock:
+            dashboard = await self.campus.dashboard(True)
+            config = self.job_config()
+            api_key = self.settings.api_key(config)
+            if not api_key and isinstance(self.model, DeepSeek):
+                raise APIError("请先在设置中配置当前模型的 API 密钥", 503)
+            payload = model_payload(dashboard)
+            items = payload["items"]
+            batches = [
+                {"current_time": payload["current_time"], "items": items[index:index + 2]}
+                for index in range(0, len(items), 2)
+            ]
+            summary_config = {
+                **config,
+                "max_output_tokens": min(1600, max(900, int(config["max_output_tokens"]))),
+                "request_timeout": min(45, max(20, int(config["request_timeout"]))),
+            }
+            semaphore = asyncio.Semaphore(3)
+
+            async def ignore(_):
+                return None
+
+            async def summarize_batch(batch):
+                async with semaphore:
+                    reservation = self.reserve_call(
+                        f"campus-dashboard:{uid()}",
+                        len(packed(batch).encode()),
+                        summary_config,
+                    )
+                    try:
+                        reply = await self.model.chat(
+                            system=CAMPUS_SUMMARY_PROMPT,
+                            messages=[{"role": "user", "content": packed(batch)}],
+                            tools=[],
+                            config=summary_config,
+                            api_key=api_key,
+                            on_delta=ignore,
+                        )
+                        self.finish_usage(reservation, reply)
+                        return parse_model_summary(reply.text)
+                    except (AgentError, ValueError, TypeError):
+                        return None
+
+            summaries = await asyncio.gather(*(summarize_batch(batch) for batch in batches))
+            summaries = [summary for summary in summaries if summary is not None]
+            if not summaries:
+                raise APIError("校园看板模型整理失败：模型未返回有效摘要", 502)
+            value = merge_model_summaries(dashboard, summaries)
+            self.campus_dashboard_cache = {"created": self.clock(), "value": value}
+            self.campus_dashboard_refresh_error = ""
+            self.db.event(
+                "campus.dashboard_generated",
+                {
+                    "model": config["model"],
+                    "cached": False,
+                    "batches": len(batches),
+                    "completed_batches": len(summaries),
+                },
+                now=self.clock(),
+            )
+            return {
+                **value,
+                "cached": False,
+                "stale": False,
+                "cached_at": self.campus_dashboard_cache["created"],
+                "cache_expires_at": self.campus_dashboard_cache["created"] + CAMPUS_DASHBOARD_CACHE_SECONDS,
+            }
 
     def insert_job(self, conn, *, kind, text, session_id=None, task_id=None, trigger_key=None, now=None, config=None):
         identity, now = uid(), self.clock() if now is None else now
@@ -1330,6 +1459,12 @@ class Gateway:
 
     async def stop(self):
         self.running = False
+        task = self.campus_dashboard_refresh_task
+        self.campus_dashboard_refresh_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        await self.campus.close()
         for execution in list(self.active.values()):
             execution.cancel()
         if self.loops:

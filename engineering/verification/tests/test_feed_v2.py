@@ -80,10 +80,10 @@ async def test_every_dns_address_must_be_public(address):
 
 
 @pytest.mark.parametrize('status,body,headers,reason', [
-    (302, b'', {'location':'https://example.org/new'}, '重定向'),
-    (503, b'', {}, '503'),
-    (200, b'x' * 2_000_001, {}, '2 MB'),
-    (200, b'<svg/>', {'content-type':'image/svg+xml'}, '类型'),
+    pytest.param(302, b'', {'location':'https://example.org/new'}, '重定向', id='redirect'),
+    pytest.param(503, b'', {}, '503', id='status'),
+    pytest.param(200, b'x' * 2_000_001, {}, '2 MB', id='oversize'),
+    pytest.param(200, b'<svg/>', {'content-type':'image/svg+xml'}, '类型', id='mime'),
 ])
 async def test_public_reader_status_size_and_mime(status, body, headers, reason):
     transport = httpx.MockTransport(lambda request: httpx.Response(status, content=body, headers=headers))
