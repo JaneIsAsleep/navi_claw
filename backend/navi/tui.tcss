@@ -1,0 +1,59 @@
+Screen {
+    background: #0c141d;
+    color: #dce8ef;
+}
+#masthead {
+    height: 3;
+    background: #101d27;
+    border-bottom: solid #27434a;
+    align-vertical: middle;
+    padding: 0 2;
+}
+#wordmark { color: #80e4c5; text-style: bold; width: 13; }
+#connection { color: #a7c3ce; width: 1fr; height: 1; }
+#top-keys { color: #99adb8; width: auto; }
+#workspace { height: 1fr; }
+#rail { width: 27; background: #101d27; border-right: solid #27434a; padding: 0 1; }
+.eyebrow { color: #90b9bf; margin: 1 0 0 0; text-style: bold; }
+#navigation { height: 10; }
+#sessions { height: 1fr; }
+#new-chat { width: 100%; margin-top: 1; }
+OptionList { background: transparent; border: none; padding: 0; }
+OptionList:focus { border: none; }
+OptionList > .option-list--option-highlighted { background: #20444b; color: #bcf4e3; text-style: bold; }
+#main { width: 1fr; padding: 0 2; }
+#page-title { height: 2; color: #c4f6e8; text-style: bold; content-align: left middle; }
+#chat, #library, #settings { height: 1fr; }
+#transcript { height: 1fr; background: #0c141d; padding: 0 1; border: solid #243a44; }
+#transcript:focus { border: solid #638f92; }
+#stream { height: auto; max-height: 5; color: #a6caff; }
+#chat-note { height: 1; color: #9cbdc7; }
+#goal-choices { height: auto; max-height: 4; border: solid #27434a; }
+#composer { height: 5; background: #152630; border: tall #395963; }
+#composer:focus { border: tall #6ac9af; }
+.buttons { height: 3; align-vertical: middle; }
+.buttons Button { margin-right: 1; min-width: 6; width: auto; padding: 0 1; }
+Button { background: #203540; border: tall #294650; color: #e1eef3; }
+Button.-primary { background: #255d55; border: tall #357b70; color: #effbf8; }
+Button.-warning { background: #5d422c; border: tall #986e40; }
+Button.-error { background: #56333a; border: tall #95505c; }
+#items { height: 2fr; border: solid #27434a; }
+#detail-scroll { height: 3fr; background: #14232e; border: solid #27434a; padding: 1; }
+#detail { height: auto; }
+#settings-summary { background: #14232e; padding: 1; height: auto; }
+#settings Input, #settings Select { max-width: 64; }
+Input, Select > SelectCurrent { background: #152630; border: tall #395963; }
+Input:focus { border: tall #6ac9af; }
+Footer { background: #101d27; }
+Screen.compact #rail { width: 20; }
+Screen.compact #top-keys { display: none; }
+Screen.compact #main { padding: 0 1; }
+Screen.rail-hidden #rail { display: none; }
+Screen.tiny #rail { display: none; }
+Screen.tiny.rail-open #rail { display: block; }
+Screen.tiny #masthead { height: 2; padding: 0 1; }
+Screen.tiny #composer { height: 4; }
+Decision { align: center middle; background: #081219 70%; }
+.dialog { width: 76; max-width: 95%; height: 75%; padding: 1 2; background: #182b36; border: round #6ac9af; }
+.dialog .heading { text-style: bold; color: #e0f6ef; height: 2; }
+.dialog VerticalScroll { height: 1fr; }

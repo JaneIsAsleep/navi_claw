@@ -47,6 +47,7 @@ def read_search_key():
 def main():
     parser = argparse.ArgumentParser(description="Navi CLI，与 Web 共享本机 Gateway")
     sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("tui", help="打开全屏终端界面")
     sub.add_parser("status")
     sub.add_parser("sessions")
     p = sub.add_parser("search-sessions")
@@ -104,7 +105,17 @@ def main():
     p = sub.add_parser("evidence")
     p.add_argument("id")
     sub.add_parser("audit")
-    args, adapter = parser.parse_args(), CLIAdapter()
+    if len(sys.argv) == 1 and sys.stdin.isatty() and sys.stdout.isatty():
+        args = parser.parse_args(["tui"])
+    else:
+        args = parser.parse_args()
+    if args.command == "tui":
+        if not sys.stdin.isatty() or not sys.stdout.isatty():
+            parser.error("全屏界面需要交互式终端")
+        from .tui import main as run_terminal
+        run_terminal()
+        return
+    adapter = CLIAdapter()
     try:
         name = args.command
         if name in {"status", "sessions", "schedules", "actions"}:

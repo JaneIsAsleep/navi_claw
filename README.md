@@ -12,6 +12,12 @@
 
 使用 `./run` 会在前台运行，需要保留终端，按 `Ctrl+C` 正常停止。请先停止后台再使用前台入口。
 
+在项目目录执行 `./start.command --no-browser`，再运行 `./navi` 或 `./navi tui`，即可打开全屏终端界面。与 Web 共用会话、搜索设置、提醒和审批。已有环境可用 `uv sync --locked --python 3.12` 安装新增依赖。
+
+`F1` 打开命令面板，`F2` 切换侧栏，`Ctrl+N` 新建对话，`Ctrl+Enter` 或 `F8` 发送，`Ctrl+Q` 退出界面。用 `Tab` 切换控件，方向键浏览列表，`Enter` 选择。窄终端默认收起侧栏。
+
+侧栏可以搜索会话标题和正文，并查看目标、提醒、动态、构想、成果、记忆、审批和活动。可以在终端批准或拒绝提案、开始构想、引用动态、切换对话联网和设置原生搜索。目标与提醒也可以在对话中提出。下载成果、编辑订阅来源和配置自定义模型端点可在 Web 完成。
+
 重启保留会话、记忆、目标、调度、作业、审批、消息和成果。电脑休眠或停止后台期间不执行检查，恢复后每个调度最多补做一次最近错过的检查，不补跑全部周期。
 
 新机器首次准备需要 Python 3.12、[uv](https://docs.astral.sh/uv/getting-started/installation/) 和 [Node.js](https://nodejs.org/en/download) 22.12 或更高版本。在项目目录执行 `./setup`，再双击启动。Python 与前端分别由 `uv.lock` 和 `frontend/package-lock.json` 锁定依赖。
